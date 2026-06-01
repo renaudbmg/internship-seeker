@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # Scoring IA (Sprint 2) — Gemini Flash
     scoring_enabled: bool = True
     gemini_api_key: str | None = None  # https://aistudio.google.com/app/apikey
-    gemini_model: str = "gemini-1.5-flash"
+    gemini_model: str = "gemini-2.0-flash"
 
     # Source: France Travail / API Offres d'emploi v2 (officielle, gratuite, credentials requis)
     # Inscription: https://francetravail.io  -> créer une application -> API "Offres d'emploi v2"
