@@ -1,0 +1,73 @@
+import { useState } from "react";
+import { useJobs, useTriggerScrape } from "./api.js";
+import StatsBar from "./components/StatsBar.jsx";
+import Filters from "./components/Filters.jsx";
+import JobCard from "./components/JobCard.jsx";
+import JobDetail from "./components/JobDetail.jsx";
+
+export default function App() {
+  const [filters, setFilters] = useState({ search: "", status: "", score_min: "" });
+  const [selectedId, setSelectedId] = useState(null);
+  const { data, isLoading, isError } = useJobs(filters);
+  const triggerScrape = useTriggerScrape();
+
+  const items = data?.items || [];
+  const selected = items.find((j) => j.id === selectedId) || null;
+
+  return (
+    <div className="flex h-screen flex-col bg-slate-50 text-slate-900">
+      <header className="border-b border-slate-200 bg-white px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold">Internship Seeker</h1>
+            <p className="text-sm text-slate-500">
+              PFE / stage sport & data — mars 2026
+            </p>
+          </div>
+          <button
+            onClick={() => triggerScrape.mutate()}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          >
+            {triggerScrape.isPending ? "Lancement…" : "Scraper maintenant"}
+          </button>
+        </div>
+        {triggerScrape.isSuccess && (
+          <p className="mt-2 text-sm text-green-600">
+            Scrape lancé en arrière-plan — rafraîchis dans quelques instants.
+          </p>
+        )}
+        <div className="mt-4">
+          <StatsBar />
+        </div>
+      </header>
+
+      <div className="border-b border-slate-200 bg-white px-6 py-3">
+        <Filters filters={filters} onChange={setFilters} />
+      </div>
+
+      <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_minmax(360px,40%)]">
+        <section className="overflow-y-auto p-6">
+          {isLoading && <p className="text-slate-500">Chargement…</p>}
+          {isError && <p className="text-red-600">Erreur de connexion à l'API (port 8000).</p>}
+          {!isLoading && items.length === 0 && (
+            <p className="text-slate-500">Aucune offre ne correspond aux filtres.</p>
+          )}
+          <div className="flex flex-col gap-3">
+            {items.map((job) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                selected={job.id === selectedId}
+                onSelect={(j) => setSelectedId(j.id)}
+              />
+            ))}
+          </div>
+        </section>
+
+        {selected && (
+          <JobDetail job={selected} onClose={() => setSelectedId(null)} />
+        )}
+      </main>
+    </div>
+  );
+}

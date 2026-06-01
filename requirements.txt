@@ -1,0 +1,18 @@
+# Sprint 1 — scraper + SQLite
+httpx==0.27.2
+SQLAlchemy==2.0.36
+pydantic-settings==2.6.1
+beautifulsoup4==4.12.3
+
+# Sprint 2 — IA scoring
+google-generativeai==0.8.3
+
+# Sprint 3 — API
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+
+# Sprint 5 — déploiement : Turso (libSQL) comme base distante persistante
+sqlalchemy-libsql==0.1.0
+
+# Pistes futures — décommenter au besoin
+# playwright==1.48.0
