@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 
 from ..config import settings
 from ..db.database import SessionLocal, init_db
@@ -94,10 +95,12 @@ def score_pending(limit: int | None = None) -> int:
                 result = scorer.score(job)
             except Exception as exc:  # une offre qui échoue ne bloque pas les autres
                 print(f"[scorer] échec « {job.title[:40]} »: {exc!r}")
+                time.sleep(5)  # pause aussi sur erreur pour éviter de surcharger l'API
                 continue
             job.score_ai = result["score"]
             job.summary_ai = result["summary"]
             scored += 1
+            time.sleep(5)  # free tier = 15 req/min → 1 req / 4s minimum
         session.commit()
     print(f"[scorer] {scored} offres scorées sur {len(pending)} en attente")
     return scored
