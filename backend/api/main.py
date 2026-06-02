@@ -8,7 +8,8 @@ app = FastAPI(title="Internship Seeker API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
+    # localhost (dev, n'importe quel port) + tout déploiement *.vercel.app (front prod)
+    allow_origin_regex=r"(http://(localhost|127\.0\.0\.1):\d+|https://.*\.vercel\.app)",
     allow_methods=["*"],
     allow_headers=["*"],
 )

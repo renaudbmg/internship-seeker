@@ -11,3 +11,8 @@ backend/db/*.db
 __pycache__/
 *.pyc
 .env
+
+# Ce projet Vercel = API Python uniquement. Le frontend est un projet Vercel séparé
+# (déployé depuis frontend/). On l'exclut ici pour garder la fonction serverless légère.
+frontend/
+node_modules/

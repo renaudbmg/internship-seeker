@@ -1,9 +1,9 @@
 {
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "frontend/dist",
+  "framework": null,
+  "buildCommand": null,
+  "installCommand": null,
+  "outputDirectory": null,
   "rewrites": [
-    { "source": "/jobs/:path*", "destination": "/api/index" },
-    { "source": "/jobs",        "destination": "/api/index" },
-    { "source": "/health",      "destination": "/api/index" }
+    { "source": "/(.*)", "destination": "/api/index" }
   ]
 }
