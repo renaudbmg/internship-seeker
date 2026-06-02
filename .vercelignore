@@ -12,7 +12,8 @@ __pycache__/
 *.pyc
 .env
 
-# Ce projet Vercel = API Python uniquement. Le frontend est un projet Vercel séparé
-# (déployé depuis frontend/). On l'exclut ici pour garder la fonction serverless légère.
-frontend/
+# NB : ne PAS exclure frontend/ ici. Ce .vercelignore racine s'applique AUSSI au
+# projet dashboard (root dir = frontend) lors du déploiement Git ; l'exclure casserait
+# son build (package.json introuvable). La taille du lambda API dépend d'api/requirements.txt,
+# pas des sources, donc inclure frontend/ est sans impact.
 node_modules/
