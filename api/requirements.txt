@@ -1,0 +1,6 @@
+# Dépendances slim pour la fonction serverless Vercel (API uniquement).
+# Le scorer Gemini et les scrapers tournent dans GitHub Actions (requirements.txt racine).
+SQLAlchemy==2.0.36
+pydantic-settings==2.6.1
+fastapi==0.115.5
+sqlalchemy-libsql==0.2.0
