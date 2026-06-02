@@ -4,8 +4,15 @@ import StatsBar from "./components/StatsBar.jsx";
 import Filters from "./components/Filters.jsx";
 import JobCard from "./components/JobCard.jsx";
 import JobDetail from "./components/JobDetail.jsx";
+import StatusPage from "./components/StatusPage.jsx";
+
+const TABS = [
+  { value: "jobs", label: "Offres" },
+  { value: "status", label: "État des lieux" },
+];
 
 export default function App() {
+  const [view, setView] = useState("jobs");
   const [filters, setFilters] = useState({ search: "", status: "", score_min: "" });
   const [selectedId, setSelectedId] = useState(null);
   const { data, isLoading, isError } = useJobs(filters);
@@ -36,38 +43,63 @@ export default function App() {
             Scrape lancé en arrière-plan — rafraîchis dans quelques instants.
           </p>
         )}
-        <div className="mt-4">
-          <StatsBar />
+        <div className="mt-4 flex gap-2">
+          {TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setView(tab.value)}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                view === tab.value
+                  ? "bg-slate-900 text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
+        {view === "jobs" && (
+          <div className="mt-4">
+            <StatsBar />
+          </div>
+        )}
       </header>
 
-      <div className="border-b border-slate-200 bg-white px-6 py-3">
-        <Filters filters={filters} onChange={setFilters} />
-      </div>
-
-      <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_minmax(360px,40%)]">
-        <section className="overflow-y-auto p-6">
-          {isLoading && <p className="text-slate-500">Chargement…</p>}
-          {isError && <p className="text-red-600">Erreur de connexion à l'API (port 8000).</p>}
-          {!isLoading && items.length === 0 && (
-            <p className="text-slate-500">Aucune offre ne correspond aux filtres.</p>
-          )}
-          <div className="flex flex-col gap-3">
-            {items.map((job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                selected={job.id === selectedId}
-                onSelect={(j) => setSelectedId(j.id)}
-              />
-            ))}
+      {view === "status" ? (
+        <main className="min-h-0 flex-1 overflow-y-auto">
+          <StatusPage />
+        </main>
+      ) : (
+        <>
+          <div className="border-b border-slate-200 bg-white px-6 py-3">
+            <Filters filters={filters} onChange={setFilters} />
           </div>
-        </section>
 
-        {selected && (
-          <JobDetail job={selected} onClose={() => setSelectedId(null)} />
-        )}
-      </main>
+          <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_minmax(360px,40%)]">
+            <section className="overflow-y-auto p-6">
+              {isLoading && <p className="text-slate-500">Chargement…</p>}
+              {isError && (
+                <p className="text-red-600">Erreur de connexion à l'API (port 8000).</p>
+              )}
+              {!isLoading && items.length === 0 && (
+                <p className="text-slate-500">Aucune offre ne correspond aux filtres.</p>
+              )}
+              <div className="flex flex-col gap-3">
+                {items.map((job) => (
+                  <JobCard
+                    key={job.id}
+                    job={job}
+                    selected={job.id === selectedId}
+                    onSelect={(j) => setSelectedId(j.id)}
+                  />
+                ))}
+              </div>
+            </section>
+
+            {selected && <JobDetail job={selected} onClose={() => setSelectedId(null)} />}
+          </main>
+        </>
+      )}
     </div>
   );
 }

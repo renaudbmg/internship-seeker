@@ -6,6 +6,7 @@ import time
 from ..config import settings
 from ..db.database import SessionLocal, init_db
 from ..db.models import Job
+from .quota import is_quota_error
 
 USER_PROFILE = """\
 Étudiant ingénieur civil des Mines de Nancy, spécialisation aide à la décision / data analytics.
@@ -93,9 +94,14 @@ def score_pending(limit: int | None = None) -> int:
         for job in pending:
             try:
                 result = scorer.score(job)
-            except Exception as exc:  # une offre qui échoue ne bloque pas les autres
+            except Exception as exc:
+                if is_quota_error(exc):
+                    # quota journalier Gemini épuisé : on stoppe, le reste reste en file
+                    print(f"[scorer] quota Gemini atteint après {scored} offres — reste en file")
+                    break
+                # une offre qui échoue (autre cause) ne bloque pas les autres
                 print(f"[scorer] échec « {job.title[:40]} »: {exc!r}")
-                time.sleep(5)  # pause aussi sur erreur pour éviter de surcharger l'API
+                time.sleep(5)
                 continue
             job.score_ai = result["score"]
             job.summary_ai = result["summary"]

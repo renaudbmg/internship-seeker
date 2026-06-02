@@ -33,6 +33,10 @@ export function useStats() {
   return useQuery({ queryKey: ["stats"], queryFn: () => request("/jobs/stats") });
 }
 
+export function useProgress() {
+  return useQuery({ queryKey: ["progress"], queryFn: () => request("/jobs/progress") });
+}
+
 export function useUpdateStatus() {
   const qc = useQueryClient();
   return useMutation({

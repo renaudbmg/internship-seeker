@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     # Extraction de champs normés (durée, dates, rémunération, missions…) par Gemini.
     # Pass séparé du scoring (un appel par offre). Voir backend/ai/extractor.py
     extraction_enabled: bool = True
+    # Quota Gemini estimé par jour (appels). Sert UNIQUEMENT à estimer le nombre de
+    # jours avant tagging complet sur la page « État des lieux ». Le traitement réel
+    # n'est pas plafonné : il s'arrête tout seul quand le quota du jour est épuisé.
+    # Free tier gemini-2.5-flash ≈ 200 req/jour ; ajuste si tu passes en payant.
+    gemini_daily_quota: int = 200
 
     # Source: France Travail / API Offres d'emploi v2 (officielle, gratuite, credentials requis)
     # Inscription: https://francetravail.io  -> créer une application -> API "Offres d'emploi v2"

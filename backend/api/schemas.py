@@ -53,3 +53,14 @@ class StatsOut(BaseModel):
     by_source: dict[str, int]
     by_status: dict[str, int]
     by_day: dict[str, int]
+
+
+class ProgressOut(BaseModel):
+    total: int
+    scored: int  # offres avec un score IA
+    extracted: int  # offres avec des champs normés extraits
+    pending_scoring: int
+    pending_extraction: int
+    remaining_calls: int  # appels Gemini restants (scoring + extraction)
+    daily_quota: int  # quota Gemini estimé par jour
+    estimated_days: int  # jours estimés avant tagging complet

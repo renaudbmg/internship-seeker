@@ -6,6 +6,7 @@ import time
 from ..config import settings
 from ..db.database import SessionLocal, init_db
 from ..db.models import Job
+from .quota import is_quota_error
 
 # Champs normés extraits pour chaque offre. Scalaires -> "Non précisé" si absent,
 # listes -> [] si absent. Pensé pour comparer les offres d'un coup d'œil.
@@ -110,7 +111,12 @@ def extract_pending(limit: int | None = None) -> int:
         for job in pending:
             try:
                 result = extractor.extract(job)
-            except Exception as exc:  # une offre qui échoue ne bloque pas les autres
+            except Exception as exc:
+                if is_quota_error(exc):
+                    # quota journalier Gemini épuisé : on stoppe, le reste reste en file
+                    print(f"[extractor] quota Gemini atteint après {done} offres — reste en file")
+                    break
+                # une offre qui échoue (autre cause) ne bloque pas les autres
                 print(f"[extractor] échec « {job.title[:40]} »: {exc!r}")
                 time.sleep(5)
                 continue
