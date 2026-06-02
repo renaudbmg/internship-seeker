@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+// En prod (Vercel) VITE_API_BASE="" → URLs relatives (même domaine, pas de CORS).
+// En dev VITE_API_BASE non défini → fallback localhost:8000.
+const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 
 async function request(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
