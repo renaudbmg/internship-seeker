@@ -65,6 +65,8 @@ export default function JobDetail({ job, onClose }) {
         </div>
       )}
 
+      {job.details_ai && <JobFiche details={job.details_ai} />}
+
       <div>
         <label className="mb-1 block text-sm font-semibold text-slate-700">Notes</label>
         <textarea
@@ -88,5 +90,68 @@ export default function JobDetail({ job, onClose }) {
         </p>
       </div>
     </aside>
+  );
+}
+
+const FACTS = [
+  ["type_contrat", "Contrat"],
+  ["duree", "Durée"],
+  ["date_debut", "Début"],
+  ["remuneration", "Rémunération"],
+  ["lieu", "Lieu"],
+  ["teletravail", "Télétravail"],
+  ["profil", "Profil"],
+  ["secteur", "Secteur"],
+];
+
+const filled = (v) => v && v !== "Non précisé";
+
+function JobFiche({ details }) {
+  const facts = FACTS.filter(([key]) => filled(details[key]));
+  const missions = Array.isArray(details.missions) ? details.missions : [];
+  const competences = Array.isArray(details.competences) ? details.competences : [];
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+      <p className="mb-2 font-semibold text-indigo-700">Fiche IA</p>
+
+      {facts.length > 0 && (
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-2">
+          {facts.map(([key, label]) => (
+            <div key={key}>
+              <dt className="text-xs uppercase tracking-wide text-slate-400">{label}</dt>
+              <dd className="font-medium text-slate-700">{details[key]}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      {competences.length > 0 && (
+        <div className="mt-3">
+          <p className="mb-1 text-xs uppercase tracking-wide text-slate-400">Compétences</p>
+          <div className="flex flex-wrap gap-1.5">
+            {competences.map((c, i) => (
+              <span
+                key={i}
+                className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700"
+              >
+                {c}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {missions.length > 0 && (
+        <div className="mt-3">
+          <p className="mb-1 text-xs uppercase tracking-wide text-slate-400">Missions</p>
+          <ul className="list-disc space-y-1 pl-5 text-slate-700">
+            {missions.map((m, i) => (
+              <li key={i}>{m}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }

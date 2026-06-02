@@ -55,6 +55,17 @@ def _score_new() -> None:
         print(f"[scorer] ignoré : {exc}")
 
 
+def _extract_new() -> None:
+    if not settings.extraction_enabled:
+        return
+    from .ai.extractor import ExtractionUnavailable, extract_pending
+
+    try:
+        extract_pending()
+    except ExtractionUnavailable as exc:
+        print(f"[extractor] ignoré : {exc}")
+
+
 def _notify(new_ids: list[str]) -> None:
     """Notifie les nouvelles offres via Telegram, en relisant leurs scores frais."""
     if not new_ids:
@@ -81,5 +92,6 @@ def run() -> list[Job]:
     for job in new[:10]:
         print(f"  • [{job.source}] {job.title} — {job.company} ({job.location})")
     _score_new()
+    _extract_new()
     _notify(new_ids)
     return new

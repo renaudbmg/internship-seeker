@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     # NB: gemini-2.0-flash a un quota free tier = 0 (429 limit:0). Les modèles 2.5+
     # sont disponibles gratuitement. On pin 2.5-flash (qualité/dispo) plutôt qu'un alias -latest.
     gemini_model: str = "gemini-2.5-flash"
+    # Extraction de champs normés (durée, dates, rémunération, missions…) par Gemini.
+    # Pass séparé du scoring (un appel par offre). Voir backend/ai/extractor.py
+    extraction_enabled: bool = True
 
     # Source: France Travail / API Offres d'emploi v2 (officielle, gratuite, credentials requis)
     # Inscription: https://francetravail.io  -> créer une application -> API "Offres d'emploi v2"

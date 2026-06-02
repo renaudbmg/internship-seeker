@@ -23,6 +23,8 @@ class Job(Base):
 
     summary_ai: Mapped[str | None] = mapped_column(Text, nullable=True)
     score_ai: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Champs normés extraits par Gemini (JSON sérialisé) — voir backend/ai/extractor.py
+    details_ai: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     status: Mapped[str] = mapped_column(String, default="to_review", index=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -1,6 +1,7 @@
+import json
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class JobOut(BaseModel):
@@ -15,10 +16,23 @@ class JobOut(BaseModel):
     description: str
     summary_ai: str | None
     score_ai: int | None
+    # Champs normés extraits par Gemini, stockés en JSON sérialisé côté DB,
+    # renvoyés ici en objet prêt à afficher.
+    details_ai: dict | None = None
     status: str
     notes: str | None
     scraped_at: datetime
     seen: bool
+
+    @field_validator("details_ai", mode="before")
+    @classmethod
+    def _parse_details(cls, value):
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except (ValueError, TypeError):
+                return None
+        return value
 
 
 class JobListOut(BaseModel):

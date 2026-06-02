@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from ..config import settings
@@ -40,7 +40,26 @@ engine = _make_engine()
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False, future=True)
 
 
+# Colonnes ajoutées après coup : create_all ne modifie jamais une table existante,
+# donc on applique des ALTER additifs idempotents au démarrage (prod + cron se migrent seuls).
+_ADDITIVE_COLUMNS: dict[str, str] = {
+    "details_ai": "TEXT",
+}
+
+
+def _migrate(engine) -> None:
+    inspector = inspect(engine)
+    if "jobs" not in inspector.get_table_names():
+        return
+    existing = {col["name"] for col in inspector.get_columns("jobs")}
+    with engine.begin() as conn:
+        for name, sql_type in _ADDITIVE_COLUMNS.items():
+            if name not in existing:
+                conn.execute(text(f"ALTER TABLE jobs ADD COLUMN {name} {sql_type}"))
+
+
 def init_db() -> None:
     from . import models  # noqa: F401  (enregistre les tables sur Base)
 
     Base.metadata.create_all(engine)
+    _migrate(engine)
