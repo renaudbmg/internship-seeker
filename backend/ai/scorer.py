@@ -100,8 +100,8 @@ def score_pending(limit: int | None = None) -> int:
             job.score_ai = result["score"]
             job.summary_ai = result["summary"]
             scored += 1
+            session.commit()  # commit par offre : un crash en cours de route ne perd rien
             time.sleep(5)  # free tier = 15 req/min → 1 req / 4s minimum
-        session.commit()
     print(f"[scorer] {scored} offres scorées sur {len(pending)} en attente")
     return scored
 
