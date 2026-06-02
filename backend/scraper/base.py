@@ -26,12 +26,45 @@ class RawJob:
 
 
 _TAG_RE = re.compile(r"<[^>]+>")
+_WS_RE = re.compile(r"\s+")
 
 
 def strip_html(text: str | None) -> str:
     if not text:
         return ""
-    return _TAG_RE.sub(" ", text).replace("&nbsp;", " ").strip()
+    cleaned = _TAG_RE.sub(" ", text).replace("&nbsp;", " ")
+    return _WS_RE.sub(" ", cleaned).strip()
+
+
+# Indices de localisation France pour filtrer les ATS internationaux (SmartRecruiters,
+# Greenhouse…) qui renvoient des offres monde entier. On garde France + télétravail FR.
+_FR_HINTS = (
+    "france",
+    "paris",
+    "lyon",
+    "annecy",
+    "lille",
+    "marseille",
+    "bordeaux",
+    "nantes",
+    "toulouse",
+    "strasbourg",
+    "grenoble",
+    "voiron",
+    "nice",
+    "rennes",
+    "montpellier",
+    "metz",
+    "nancy",
+)
+
+
+def is_france(location_text: str | None, country_code: str | None = None) -> bool:
+    """True si l'offre est localisée en France (code pays 'fr' ou ville/France dans le texte)."""
+    if country_code and country_code.strip().lower() == "fr":
+        return True
+    text = (location_text or "").lower()
+    return any(hint in text for hint in _FR_HINTS)
 
 
 class BaseScraper(ABC):

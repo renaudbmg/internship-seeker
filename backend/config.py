@@ -21,6 +21,16 @@ class Settings(BaseSettings):
     themuse_enabled: bool = False
     themuse_api_key: str | None = None
 
+    # Source: ATS SmartRecruiters (API publique, sans clé). Marques sport (ex. Salomon).
+    # `smartrecruiters_companies` = identifiants séparés par des virgules.
+    smartrecruiters_enabled: bool = True
+    smartrecruiters_companies: str = "Salomon"
+
+    # Source: ATS Greenhouse (API publique « job board », sans clé). Ex. On Running.
+    # `greenhouse_boards` = identifiants de board séparés par des virgules.
+    greenhouse_enabled: bool = True
+    greenhouse_boards: str = "onrunning"
+
     # Scoring IA (Sprint 2) — Gemini Flash
     scoring_enabled: bool = True
     gemini_api_key: str | None = None  # https://aistudio.google.com/app/apikey
