@@ -1,6 +1,11 @@
 # Exclure la base SQLite locale — en production on utilise Turso (TURSO_DATABASE_URL)
 backend/db/*.db
 
+# requirements.txt racine = pour GitHub Actions uniquement. S'il est présent,
+# Vercel détecte un projet Python et ignore le build statique du frontend.
+# La fonction serverless utilise api/requirements.txt.
+/requirements.txt
+
 # Inutile en production
 .venv/
 __pycache__/
