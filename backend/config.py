@@ -21,15 +21,21 @@ class Settings(BaseSettings):
     themuse_enabled: bool = False
     themuse_api_key: str | None = None
 
-    # Source: ATS SmartRecruiters (API publique, sans clé). Marques sport (ex. Salomon).
+    # Source: ATS SmartRecruiters (API publique, sans clé). Marques sport (ex. Salomon, Asics).
     # `smartrecruiters_companies` = identifiants séparés par des virgules.
     smartrecruiters_enabled: bool = True
-    smartrecruiters_companies: str = "Salomon"
+    smartrecruiters_companies: str = "Salomon,Asics"
 
     # Source: ATS Greenhouse (API publique « job board », sans clé). Ex. On Running.
     # `greenhouse_boards` = identifiants de board séparés par des virgules.
     greenhouse_enabled: bool = True
     greenhouse_boards: str = "onrunning"
+
+    # Source: ATS Workday (API CXS publique). Triplets `tenant:datacenter:site` séparés
+    # par des virgules. Ex. Deckers (HOKA/UGG). New Balance dispo : "newbalance:wd1:careers".
+    workday_enabled: bool = True
+    workday_sites: str = "deckers:wd5:deckers"
+    workday_max_descriptions: int = 30
 
     # Scoring IA (Sprint 2) — Gemini Flash
     scoring_enabled: bool = True

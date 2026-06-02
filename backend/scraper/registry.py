@@ -4,6 +4,7 @@ from .sources.greenhouse import GreenhouseScraper
 from .sources.linkedin import LinkedInScraper
 from .sources.smartrecruiters import SmartRecruitersScraper
 from .sources.themuse import TheMuseScraper
+from .sources.workday import WorkdayScraper
 
 
 def build_scrapers(settings) -> list[BaseScraper]:
@@ -18,4 +19,6 @@ def build_scrapers(settings) -> list[BaseScraper]:
         scrapers.append(SmartRecruitersScraper(settings))
     if settings.greenhouse_enabled:
         scrapers.append(GreenhouseScraper(settings))
+    if settings.workday_enabled:
+        scrapers.append(WorkdayScraper(settings))
     return scrapers
