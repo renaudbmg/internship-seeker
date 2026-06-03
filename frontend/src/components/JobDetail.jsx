@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useUpdateNotes, useUpdateStatus, useUpdateTracking } from "../api.js";
+import { useSetHidden, useUpdateNotes, useUpdateStatus, useUpdateTracking } from "../api.js";
 import { RESPONSES, STATUSES, followUpDue, formatDate, scoreColor, toDateInput } from "../ui.js";
 import CompanyLogo from "./CompanyLogo.jsx";
 
@@ -7,6 +7,7 @@ export default function JobDetail({ job, onClose }) {
   const [notes, setNotes] = useState(job.notes || "");
   const updateStatus = useUpdateStatus();
   const updateNotes = useUpdateNotes();
+  const setHidden = useSetHidden();
 
   useEffect(() => setNotes(job.notes || ""), [job.id]);
 
@@ -44,6 +45,13 @@ export default function JobDetail({ job, onClose }) {
         >
           Voir l'offre ↗
         </a>
+        <button
+          onClick={() => setHidden.mutate({ id: job.id, hidden: !job.hidden })}
+          className="ml-auto rounded-lg px-3 py-1 text-sm text-slate-500 hover:bg-slate-100"
+          title={job.hidden ? "Restaurer l'annonce" : "Masquer l'annonce"}
+        >
+          {job.hidden ? "↩ Restaurer" : "🗑 Masquer"}
+        </button>
       </div>
 
       <div className="flex flex-wrap gap-2">

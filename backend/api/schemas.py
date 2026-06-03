@@ -27,6 +27,7 @@ class JobOut(BaseModel):
     applied_at: datetime | None = None
     follow_up_at: datetime | None = None
     response: str | None = None
+    hidden: bool = False
 
     @field_validator("details_ai", mode="before")
     @classmethod
@@ -56,6 +57,10 @@ class TrackingUpdate(BaseModel):
     # Suivi de candidature. Champs optionnels : None efface la valeur.
     follow_up_at: datetime | None = None
     response: str | None = None
+
+
+class HiddenUpdate(BaseModel):
+    hidden: bool
 
 
 class StatsOut(BaseModel):

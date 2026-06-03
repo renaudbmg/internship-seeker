@@ -1,3 +1,4 @@
+import { useSetHidden } from "../api.js";
 import { followUpDue, scoreColor, statusMeta } from "../ui.js";
 import CompanyLogo from "./CompanyLogo.jsx";
 
@@ -12,6 +13,12 @@ function ficheChips(details) {
 export default function JobCard({ job, selected, onSelect }) {
   const meta = statusMeta(job.status);
   const chips = ficheChips(job.details_ai);
+  const setHidden = useSetHidden();
+
+  const toggleHidden = (e) => {
+    e.stopPropagation(); // ne pas sélectionner la carte
+    setHidden.mutate({ id: job.id, hidden: !job.hidden });
+  };
   return (
     <button
       onClick={() => onSelect(job)}
@@ -62,6 +69,16 @@ export default function JobCard({ job, selected, onSelect }) {
             ⏰ relance
           </span>
         )}
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={toggleHidden}
+          onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && toggleHidden(e)}
+          title={job.hidden ? "Restaurer l'annonce" : "Masquer l'annonce"}
+          className="ml-auto rounded-full px-2 py-0.5 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+        >
+          {job.hidden ? "↩ Restaurer" : "🗑 Masquer"}
+        </span>
       </div>
     </button>
   );

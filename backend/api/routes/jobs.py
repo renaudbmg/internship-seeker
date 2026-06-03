@@ -6,7 +6,14 @@ from sqlalchemy.orm import Session
 
 from ...db.models import Job
 from ..deps import get_session
-from ..schemas import JobListOut, JobOut, NotesUpdate, StatusUpdate, TrackingUpdate
+from ..schemas import (
+    HiddenUpdate,
+    JobListOut,
+    JobOut,
+    NotesUpdate,
+    StatusUpdate,
+    TrackingUpdate,
+)
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -21,10 +28,16 @@ def list_jobs(
     status: str | None = None,
     score_min: int | None = None,
     search: str | None = None,
+    hidden: bool = False,  # False = annonces actives ; True = corbeille (archives)
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ):
     stmt = select(Job)
+    # Par défaut on n'affiche que les annonces non masquées ; hidden=true = la corbeille.
+    if hidden:
+        stmt = stmt.where(Job.hidden.is_(True))
+    else:
+        stmt = stmt.where(Job.hidden.isnot(True))
     if source:
         stmt = stmt.where(Job.source == source)
     if status:
@@ -89,6 +102,21 @@ def update_tracking(
         raise HTTPException(status_code=404, detail="Offre introuvable")
     job.follow_up_at = payload.follow_up_at
     job.response = payload.response
+    session.commit()
+    session.refresh(job)
+    return job
+
+
+@router.patch("/{job_id}/hidden", response_model=JobOut)
+def update_hidden(
+    job_id: str, payload: HiddenUpdate, session: Session = Depends(get_session)
+):
+    """Masque (archive) ou restaure une annonce. L'annonce reste en base : la dédup
+    empêche sa ré-import au prochain scrape, donc pas de re-scoring Gemini."""
+    job = session.get(Job, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Offre introuvable")
+    job.hidden = payload.hidden
     session.commit()
     session.refresh(job)
     return job

@@ -35,6 +35,16 @@ export default function Filters({ filters, onChange }) {
           className="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm"
         />
       </label>
+      <button
+        onClick={() => onChange({ ...filters, hidden: filters.hidden ? "" : "true" })}
+        className={`rounded-lg px-3 py-2 text-sm font-medium ${
+          filters.hidden
+            ? "bg-slate-800 text-white"
+            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+        }`}
+      >
+        {filters.hidden ? "← Annonces actives" : "🗑 Corbeille"}
+      </button>
     </div>
   );
 }

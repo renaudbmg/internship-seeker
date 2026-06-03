@@ -32,6 +32,9 @@ class Job(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     scraped_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     seen: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Masquée par l'utilisateur (archivage) : exclue des listes mais conservée en base
+    # pour que la dédup empêche sa ré-import (et donc un nouveau scoring Gemini).
+    hidden: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
 
     # Suivi de candidature
     applied_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # auto à "applied"

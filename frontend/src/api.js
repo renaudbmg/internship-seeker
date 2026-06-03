@@ -103,6 +103,33 @@ export function useUpdateTracking() {
   });
 }
 
+// Masque/restaure une annonce. Optimiste : l'offre disparaît immédiatement de la
+// liste courante (qu'on soit dans les actives ou dans la corbeille).
+export function useSetHidden() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, hidden }) =>
+      request(`/jobs/${id}/hidden`, { method: "PATCH", body: JSON.stringify({ hidden }) }),
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: ["jobs"] });
+      const previous = qc.getQueriesData({ queryKey: ["jobs"] });
+      qc.setQueriesData({ queryKey: ["jobs"] }, (old) => {
+        if (!old?.items) return old;
+        const items = old.items.filter((j) => j.id !== id);
+        return { ...old, items, total: Math.max(0, (old.total ?? items.length) - 1) };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      ctx?.previous?.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["jobs"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
+    },
+  });
+}
+
 export function useTriggerScrape() {
   return useMutation({
     mutationFn: () => request("/jobs/trigger-scrape", { method: "POST" }),

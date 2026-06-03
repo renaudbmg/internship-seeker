@@ -15,7 +15,7 @@ const TABS = [
 
 export default function App() {
   const [view, setView] = useState("jobs");
-  const [filters, setFilters] = useState({ search: "", status: "", score_min: "" });
+  const [filters, setFilters] = useState({ search: "", status: "", score_min: "", hidden: "" });
   const [selectedId, setSelectedId] = useState(null);
   const { data, isLoading, isError } = useJobs(filters);
   const triggerScrape = useTriggerScrape();

@@ -23,23 +23,32 @@ _SCORE_BUCKETS = [
 
 @router.get("/stats", response_model=StatsOut)
 def stats(session: Session = Depends(get_session)):
-    total = session.execute(select(func.count(Job.id))).scalar_one()
+    # Stats sur les annonces actives uniquement (les masquées sont exclues).
+    active = Job.hidden.isnot(True)
+    total = session.execute(select(func.count(Job.id)).where(active)).scalar_one()
 
     by_source = dict(
-        session.execute(select(Job.source, func.count(Job.id)).group_by(Job.source)).all()
+        session.execute(
+            select(Job.source, func.count(Job.id)).where(active).group_by(Job.source)
+        ).all()
     )
     by_status = dict(
-        session.execute(select(Job.status, func.count(Job.id)).group_by(Job.status)).all()
+        session.execute(
+            select(Job.status, func.count(Job.id)).where(active).group_by(Job.status)
+        ).all()
     )
     day = func.strftime("%Y-%m-%d", Job.scraped_at)
     by_day = dict(
-        session.execute(select(day, func.count(Job.id)).group_by(day).order_by(day)).all()
+        session.execute(
+            select(day, func.count(Job.id)).where(active).group_by(day).order_by(day)
+        ).all()
     )
 
     by_score: dict[str, int] = {}
     for label, low, high in _SCORE_BUCKETS:
         count = session.execute(
             select(func.count(Job.id)).where(
+                active,
                 Job.score_ai.isnot(None),
                 Job.score_ai >= low,
                 Job.score_ai < high,
