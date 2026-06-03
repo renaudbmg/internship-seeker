@@ -29,8 +29,6 @@ def _store(raw_jobs: list[RawJob]) -> list[Job]:
             seen_ids.add(jid)
             existing = session.get(Job, jid)
             if existing is not None:
-                # Offre déjà connue : on ne réinsère pas, mais on complète le logo
-                # s'il manquait (capturé seulement au scrape) → backfill au fil des runs.
                 if rj.logo_url and not existing.logo_url:
                     existing.logo_url = rj.logo_url
                 continue
@@ -50,18 +48,24 @@ def _store(raw_jobs: list[RawJob]) -> list[Job]:
     return new
 
 
-def _score_new() -> None:
+def _tag_new() -> None:
+    """Scoring + extraction combinés en 1 appel Gemini par offre (tagger.py).
+
+    Traite les offres dont score_ai IS NULL. Maximise le quota free tier
+    (1 500 RPD, 15 RPM) : sleep 4s entre appels dans tag_pending().
+    """
     if not settings.scoring_enabled:
         return
-    from .ai.scorer import ScoringUnavailable, score_pending
+    from .ai.tagger import TaggerUnavailable, tag_pending
 
     try:
-        score_pending()
-    except ScoringUnavailable as exc:
-        print(f"[scorer] ignoré : {exc}")
+        tag_pending()
+    except TaggerUnavailable as exc:
+        print(f"[tagger] ignoré : {exc}")
 
 
-def _extract_new() -> None:
+def _extract_remaining() -> None:
+    """Backward-compat : extraction seule pour offres déjà scorées sans details_ai."""
     if not settings.extraction_enabled:
         return
     from .ai.extractor import ExtractionUnavailable, extract_pending
@@ -97,7 +101,7 @@ def run() -> list[Job]:
     print(f"\n{len(new)} nouvelles offres stockées (sur {len(raw)} récupérées).")
     for job in new[:10]:
         print(f"  • [{job.source}] {job.title} — {job.company} ({job.location})")
-    _score_new()
-    _extract_new()
+    _tag_new()
+    _extract_remaining()
     _notify(new_ids)
     return new

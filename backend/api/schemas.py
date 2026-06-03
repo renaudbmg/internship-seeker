@@ -54,6 +54,7 @@ class StatsOut(BaseModel):
     by_source: dict[str, int]
     by_status: dict[str, int]
     by_day: dict[str, int]
+    by_score: dict[str, int]  # buckets "0-19", "20-39", "40-59", "60-79", "80-100"
 
 
 class ProgressOut(BaseModel):
@@ -62,6 +63,6 @@ class ProgressOut(BaseModel):
     extracted: int  # offres avec des champs normés extraits
     pending_scoring: int
     pending_extraction: int
-    remaining_calls: int  # appels Gemini restants (scoring + extraction)
+    remaining_calls: int  # appels Gemini restants (1 appel par offre avec le tagger combiné)
     daily_quota: int  # quota Gemini estimé par jour
     estimated_days: int  # jours estimés avant tagging complet

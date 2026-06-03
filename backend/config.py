@@ -37,26 +37,30 @@ class Settings(BaseSettings):
     workday_sites: str = "deckers:wd5:deckers"
     workday_max_descriptions: int = 30
 
-    # Scoring IA (Sprint 2) — Gemini Flash
+    # Scoring IA + extraction — Gemini Flash (1 appel combiné par offre via tagger.py)
     scoring_enabled: bool = True
     gemini_api_key: str | None = None  # https://aistudio.google.com/app/apikey
-    # NB: gemini-2.0-flash a un quota free tier = 0 (429 limit:0). Les modèles 2.5+
-    # sont disponibles gratuitement. On pin 2.5-flash (qualité/dispo) plutôt qu'un alias -latest.
-    gemini_model: str = "gemini-2.5-flash"
-    # Extraction de champs normés (durée, dates, rémunération, missions…) par Gemini.
-    # Pass séparé du scoring (un appel par offre). Voir backend/ai/extractor.py
+    # Free tier réel après la coupe Google du 7 déc. 2025 :
+    #   gemini-2.5-flash       → 10 RPM, 250 RPD
+    #   gemini-2.5-flash-lite  → 15 RPM, 1 000 RPD
+    # On choisit flash-lite : 4× plus de quota journalier (1 000 vs 250) et 15 RPM
+    # (vs 10), pour une tâche de scoring/extraction structurée où la qualité suffit.
+    gemini_model: str = "gemini-2.5-flash-lite"
+    # Extraction de champs normés — activée via le tagger combiné (même flag).
+    # Conservé pour le chemin de backward-compat (offres déjà scorées sans extraction).
     extraction_enabled: bool = True
-    # Quota Gemini estimé par jour (appels). Sert UNIQUEMENT à estimer le nombre de
-    # jours avant tagging complet sur la page « État des lieux ». Le traitement réel
-    # n'est pas plafonné : il s'arrête tout seul quand le quota du jour est épuisé.
-    # Free tier gemini-2.5-flash ≈ 200 req/jour ; ajuste si tu passes en payant.
-    gemini_daily_quota: int = 200
+    # Quota journalier RPD du modèle ci-dessus. Sert à estimer les jours restants
+    # sur « État des lieux ». flash-lite = 1 000 RPD ; mets 250 si tu repasses sur flash.
+    # Le rythme réel entre appels est géré par PACE_SECONDS dans backend/ai/quota.py.
+    gemini_daily_quota: int = 1000
 
-    # Source: France Travail / API Offres d'emploi v2 (officielle, gratuite, credentials requis)
-    # Inscription: https://francetravail.io  -> créer une application -> API "Offres d'emploi v2"
-    france_travail_enabled: bool = False
-    france_travail_client_id: str | None = None
-    france_travail_client_secret: str | None = None
+    # Source: Welcome to the Jungle (via Algolia public, extrait depuis leur page)
+    wttj_enabled: bool = True
+    wttj_max_per_keyword: int = 50
+
+    # Source: JobTeaser (scraping HTML)
+    jobteaser_enabled: bool = True
+    jobteaser_max_per_keyword: int = 50
 
     # Notifications Telegram (Sprint 5) — bot API directe
     # 1) parler à @BotFather -> /newbot -> récupérer le token

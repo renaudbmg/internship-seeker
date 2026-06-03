@@ -5,9 +5,11 @@ import Filters from "./components/Filters.jsx";
 import JobCard from "./components/JobCard.jsx";
 import JobDetail from "./components/JobDetail.jsx";
 import StatusPage from "./components/StatusPage.jsx";
+import Charts from "./components/Charts.jsx";
 
 const TABS = [
   { value: "jobs", label: "Offres" },
+  { value: "charts", label: "Graphiques" },
   { value: "status", label: "État des lieux" },
 ];
 
@@ -68,6 +70,10 @@ export default function App() {
       {view === "status" ? (
         <main className="min-h-0 flex-1 overflow-y-auto">
           <StatusPage />
+        </main>
+      ) : view === "charts" ? (
+        <main className="min-h-0 flex-1 overflow-y-auto">
+          <Charts />
         </main>
       ) : (
         <>
