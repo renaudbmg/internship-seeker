@@ -62,6 +62,24 @@ _FR_HINTS = (
 )
 
 
+def title_has_excluded_term(title: str | None, terms: list[str]) -> bool:
+    """True si le titre contient un des termes d'exclusion (mot entier, casse ignorée).
+
+    Correspondance par frontière de mot : "cdi" ne matche PAS "Cdiscount", mais matche
+    "Stage CDI". Gère les accents (é, è… sont des caractères de mot en regex Unicode).
+    """
+    if not title:
+        return False
+    low = title.lower()
+    for term in terms:
+        t = term.strip().lower()
+        if not t:
+            continue
+        if re.search(rf"(?<!\w){re.escape(t)}(?!\w)", low):
+            return True
+    return False
+
+
 def is_france(location_text: str | None, country_code: str | None = None) -> bool:
     """True si l'offre est localisée en France (code pays 'fr' ou ville/France dans le texte)."""
     if country_code and country_code.strip().lower() == "fr":

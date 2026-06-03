@@ -15,7 +15,17 @@ class Settings(BaseSettings):
     linkedin_max_per_keyword: int = 25  # ~10 offres par page
     linkedin_fetch_descriptions: bool = True
     linkedin_max_descriptions: int = 50  # limite anti rate-limit
-    linkedin_experience_level: str | None = None  # ex "1"=stage, "2"=débutant (filtre f_E)
+    # Filtre serveur LinkedIn f_E (niveau d'expérience) : 1=Stage, 2=Débutant,
+    # 3=Confirmé, 4=Senior, 5=Directeur, 6=Exécutif. "1,2" = stage + entrée de carrière.
+    # → LinkedIn ne renvoie que ces niveaux : pool déjà filtré avant import/scoring.
+    linkedin_experience_level: str | None = "1,2"
+    # Filtre client : titres rejetés AVANT stockage (le tag f_E de LinkedIn est imparfait
+    # et laisse passer des postes senior). Liste de termes séparés par des virgules,
+    # rejet par correspondance de mot entier (insensible à la casse).
+    linkedin_title_exclude: str = (
+        "senior,confirmé,confirmée,expérimenté,expérimentée,lead,manager,responsable,"
+        "directeur,directrice,head of,principal,chef de,expert,architecte,cdi,vie,v.i.e"
+    )
 
     # Source: The Muse (gratuite, sans clé) — socle de secours, désactivé par défaut
     themuse_enabled: bool = False
@@ -86,6 +96,10 @@ class Settings(BaseSettings):
     @property
     def keyword_list(self) -> list[str]:
         return [k.strip() for k in self.keywords.split(",") if k.strip()]
+
+    @property
+    def linkedin_title_exclude_list(self) -> list[str]:
+        return [t.strip() for t in self.linkedin_title_exclude.split(",") if t.strip()]
 
 
 settings = Settings()

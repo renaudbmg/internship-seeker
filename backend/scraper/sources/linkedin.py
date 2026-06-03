@@ -3,7 +3,7 @@ import time
 import httpx
 from bs4 import BeautifulSoup
 
-from ..base import BaseScraper, RawJob
+from ..base import BaseScraper, RawJob, title_has_excluded_term
 
 
 class LinkedInScraper(BaseScraper):
@@ -16,6 +16,7 @@ class LinkedInScraper(BaseScraper):
     """
 
     name = "linkedin"
+    _excluded = 0  # compteur de titres écartés (réinitialisé dans fetch)
     SEARCH_URL = (
         "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
     )
@@ -32,6 +33,7 @@ class LinkedInScraper(BaseScraper):
 
     def fetch(self) -> list[RawJob]:
         jobs: dict[str, RawJob] = {}
+        self._excluded = 0  # compteur de titres rejetés (postes senior)
         with httpx.Client(timeout=self.timeout, headers=self.headers) as client:
             for keyword in self.settings.keyword_list:
                 self._search_keyword(client, keyword, jobs)
@@ -39,6 +41,8 @@ class LinkedInScraper(BaseScraper):
             if self.settings.linkedin_fetch_descriptions:
                 self._enrich_descriptions(client, list(jobs.values()))
 
+        if self._excluded:
+            print(f"[linkedin] {self._excluded} offres écartées (titre senior/hors stage)")
         return list(jobs.values())
 
     def _search_keyword(
@@ -71,6 +75,7 @@ class LinkedInScraper(BaseScraper):
 
     def _parse_cards(self, html: str) -> list[RawJob]:
         soup = BeautifulSoup(html, "html.parser")
+        exclude = self.settings.linkedin_title_exclude_list
         out: list[RawJob] = []
         for card in soup.select("div.base-card"):
             urn = card.get("data-entity-urn", "")
@@ -78,13 +83,19 @@ class LinkedInScraper(BaseScraper):
             if not job_id:
                 continue
             title_el = card.select_one("h3.base-search-card__title")
+            title = title_el.get_text(strip=True) if title_el else ""
+            # Filtre client : on écarte les titres senior AVANT stockage/scoring,
+            # le tag f_E de LinkedIn laissant passer des postes hors stage.
+            if title_has_excluded_term(title, exclude):
+                self._excluded += 1
+                continue
             company_el = card.select_one("h4.base-search-card__subtitle")
             location_el = card.select_one("span.job-search-card__location")
             link_el = card.select_one("a.base-card__full-link")
             url = link_el["href"].split("?")[0] if link_el and link_el.has_attr("href") else ""
             out.append(
                 RawJob(
-                    title=title_el.get_text(strip=True) if title_el else "",
+                    title=title,
                     company=company_el.get_text(strip=True) if company_el else "",
                     source="linkedin",
                     url=url,
