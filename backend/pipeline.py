@@ -27,8 +27,13 @@ def _store(raw_jobs: list[RawJob]) -> list[Job]:
             if jid in seen_ids:
                 continue  # doublon au sein du même run
             seen_ids.add(jid)
-            if session.get(Job, jid) is not None:
-                continue  # déjà en base
+            existing = session.get(Job, jid)
+            if existing is not None:
+                # Offre déjà connue : on ne réinsère pas, mais on complète le logo
+                # s'il manquait (capturé seulement au scrape) → backfill au fil des runs.
+                if rj.logo_url and not existing.logo_url:
+                    existing.logo_url = rj.logo_url
+                continue
             job = Job(
                 id=jid,
                 title=rj.title,

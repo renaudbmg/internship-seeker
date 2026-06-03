@@ -1,8 +1,17 @@
 import { scoreColor, statusMeta } from "../ui.js";
 import CompanyLogo from "./CompanyLogo.jsx";
 
+const filled = (v) => v && v !== "Non précisé";
+
+// Faits clés de la Fiche IA affichés en puces sur la carte pour comparer sans ouvrir.
+function ficheChips(details) {
+  if (!details) return [];
+  return [details.type_contrat, details.duree, details.teletravail].filter(filled);
+}
+
 export default function JobCard({ job, selected, onSelect }) {
   const meta = statusMeta(job.status);
+  const chips = ficheChips(job.details_ai);
   return (
     <button
       onClick={() => onSelect(job)}
@@ -28,6 +37,18 @@ export default function JobCard({ job, selected, onSelect }) {
       </div>
       {job.summary_ai && (
         <p className="mt-2 line-clamp-2 text-sm text-slate-500">{job.summary_ai}</p>
+      )}
+      {chips.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {chips.map((c, i) => (
+            <span
+              key={i}
+              className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600"
+            >
+              {c}
+            </span>
+          ))}
+        </div>
       )}
       <div className="mt-3 flex items-center gap-2">
         <span className={`rounded-full px-2 py-0.5 text-xs ${meta.color}`}>{meta.label}</span>
