@@ -1,4 +1,5 @@
 import { scoreColor, statusMeta } from "../ui.js";
+import CompanyLogo from "./CompanyLogo.jsx";
 
 export default function JobCard({ job, selected, onSelect }) {
   const meta = statusMeta(job.status);
@@ -10,11 +11,14 @@ export default function JobCard({ job, selected, onSelect }) {
       }`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="truncate font-semibold text-slate-900">{job.title}</h3>
-          <p className="truncate text-sm text-slate-600">
-            {job.company} · {job.location || "—"}
-          </p>
+        <div className="flex min-w-0 items-start gap-3">
+          <CompanyLogo src={job.logo_url} company={job.company} size={40} />
+          <div className="min-w-0">
+            <h3 className="truncate font-semibold text-slate-900">{job.title}</h3>
+            <p className="truncate text-sm text-slate-600">
+              {job.company} · {job.location || "—"}
+            </p>
+          </div>
         </div>
         <span
           className={`shrink-0 rounded-lg px-2 py-1 text-sm font-bold ${scoreColor(job.score_ai)}`}

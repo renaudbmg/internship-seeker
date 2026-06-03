@@ -2,8 +2,10 @@ name: Scrape quotidien
 
 on:
   schedule:
-    # 06:30 UTC = ~07:30/08:30 en France selon l'heure d'été/hiver
-    - cron: "30 6 * * *"
+    # 08:00 UTC. IMPORTANT : le quota gratuit Gemini se réinitialise à minuit
+    # heure du Pacifique (= 07:00 UTC l'été). On lance APRÈS ce reset pour
+    # disposer du quota plein du jour (sinon le run tombe sur le quota épuisé de la veille).
+    - cron: "0 8 * * *"
   workflow_dispatch: {} # déclenchement manuel depuis l'onglet Actions
 
 jobs:

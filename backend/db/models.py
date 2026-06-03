@@ -20,6 +20,8 @@ class Job(Base):
     url: Mapped[str] = mapped_column(Text)
     location: Mapped[str] = mapped_column(String, default="")
     description: Mapped[str] = mapped_column(Text, default="")
+    # URL du logo entreprise fournie par la source (LinkedIn) ; sinon NULL → repli initiales.
+    logo_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     summary_ai: Mapped[str | None] = mapped_column(Text, nullable=True)
     score_ai: Mapped[int | None] = mapped_column(Integer, nullable=True)

@@ -16,6 +16,9 @@ class RawJob:
     description: str = ""
     # Identifiant stable fourni par la source (ex: jobId LinkedIn) — privilégié pour la dédup.
     source_id: str | None = None
+    # URL du logo de l'entreprise quand la source la fournit (LinkedIn surtout) ; sinon None
+    # → le front affiche un repli initiales colorées.
+    logo_url: str | None = None
 
     def job_id(self) -> str:
         if self.source_id:

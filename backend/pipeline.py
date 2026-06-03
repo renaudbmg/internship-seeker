@@ -37,6 +37,7 @@ def _store(raw_jobs: list[RawJob]) -> list[Job]:
                 url=rj.url,
                 location=rj.location,
                 description=rj.description,
+                logo_url=rj.logo_url,
             )
             session.add(job)
             new.append(job)

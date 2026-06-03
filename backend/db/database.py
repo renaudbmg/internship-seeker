@@ -44,6 +44,7 @@ SessionLocal = sessionmaker(bind=engine, expire_on_commit=False, future=True)
 # donc on applique des ALTER additifs idempotents au démarrage (prod + cron se migrent seuls).
 _ADDITIVE_COLUMNS: dict[str, str] = {
     "details_ai": "TEXT",
+    "logo_url": "TEXT",
 }
 
 

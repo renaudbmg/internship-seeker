@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useUpdateNotes, useUpdateStatus } from "../api.js";
 import { STATUSES, scoreColor } from "../ui.js";
+import CompanyLogo from "./CompanyLogo.jsx";
 
 export default function JobDetail({ job, onClose }) {
   const [notes, setNotes] = useState(job.notes || "");
@@ -14,11 +15,14 @@ export default function JobDetail({ job, onClose }) {
   return (
     <aside className="flex h-full flex-col gap-4 overflow-y-auto border-l border-slate-200 bg-white p-5">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">{job.title}</h2>
-          <p className="text-sm text-slate-600">
-            {job.company} · {job.location || "—"}
-          </p>
+        <div className="flex items-start gap-3">
+          <CompanyLogo src={job.logo_url} company={job.company} size={48} />
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">{job.title}</h2>
+            <p className="text-sm text-slate-600">
+              {job.company} · {job.location || "—"}
+            </p>
+          </div>
         </div>
         <button
           onClick={onClose}

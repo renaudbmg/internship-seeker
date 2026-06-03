@@ -90,9 +90,24 @@ class LinkedInScraper(BaseScraper):
                     url=url,
                     location=location_el.get_text(strip=True) if location_el else "",
                     source_id=job_id,
+                    logo_url=self._extract_logo(card),
                 )
             )
         return out
+
+    @staticmethod
+    def _extract_logo(card) -> str | None:
+        """Logo entreprise des cartes guest LinkedIn. L'image est chargée en lazy :
+        l'URL réelle est dans data-delayed-url (parfois data-ghost-url), src étant un
+        placeholder transparent. On filtre les data: URIs."""
+        img = card.select_one("img")
+        if not img:
+            return None
+        for attr in ("data-delayed-url", "data-ghost-url", "src"):
+            val = img.get(attr)
+            if val and val.startswith("http"):
+                return val
+        return None
 
     def _enrich_descriptions(self, client: httpx.Client, cards: list[RawJob]) -> None:
         for card in cards[: self.settings.linkedin_max_descriptions]:
