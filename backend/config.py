@@ -40,19 +40,17 @@ class Settings(BaseSettings):
     # Scoring IA + extraction — Gemini Flash (1 appel combiné par offre via tagger.py)
     scoring_enabled: bool = True
     gemini_api_key: str | None = None  # https://aistudio.google.com/app/apikey
-    # Free tier réel après la coupe Google du 7 déc. 2025 :
-    #   gemini-2.5-flash       → 10 RPM, 250 RPD
-    #   gemini-2.5-flash-lite  → 15 RPM, 1 000 RPD
-    # On choisit flash-lite : 4× plus de quota journalier (1 000 vs 250) et 15 RPM
-    # (vs 10), pour une tâche de scoring/extraction structurée où la qualité suffit.
-    gemini_model: str = "gemini-2.5-flash-lite"
+    # Limites réelles vérifiées sur aistudio.google.com/rate-limit (free tier) :
+    #   gemini-2.5-flash : 5 RPM, 250K TPM, 20 RPD
+    # gemini-2.5-flash-lite n'est pas disponible sur ce compte.
+    # PACE_SECONDS dans quota.py = 13s (marge confortable sous 5 RPM = 12s min).
+    gemini_model: str = "gemini-2.5-flash"
     # Extraction de champs normés — activée via le tagger combiné (même flag).
     # Conservé pour le chemin de backward-compat (offres déjà scorées sans extraction).
     extraction_enabled: bool = True
-    # Quota journalier RPD du modèle ci-dessus. Sert à estimer les jours restants
-    # sur « État des lieux ». flash-lite = 1 000 RPD ; mets 250 si tu repasses sur flash.
-    # Le rythme réel entre appels est géré par PACE_SECONDS dans backend/ai/quota.py.
-    gemini_daily_quota: int = 1000
+    # RPD réel = 20. Avec le tagger combiné (1 appel/offre), on tague 20 offres/jour max.
+    # ~265 offres en attente → ~13 jours pour tout tagger au rythme actuel.
+    gemini_daily_quota: int = 20
 
     # Source: Welcome to the Jungle (via Algolia public, extrait depuis leur page)
     wttj_enabled: bool = True

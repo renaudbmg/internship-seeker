@@ -11,7 +11,8 @@ from typing import Callable
 #   - RPD (par jour)   : épuisé pour la journée — inutile d'insister, on stoppe.
 # Confondre les deux (ancien comportement) faisait stopper le pipeline au premier
 # pic de RPM, ne taguant qu'une poignée d'offres alors que le quota du jour restait.
-PACE_SECONDS = 4.5  # entre 2 appels réussis → ~13 req/min, sous la limite 15 RPM
+PACE_SECONDS = 13.0  # entre 2 appels réussis → ~4,6 req/min, sous la limite 5 RPM
+# (gemini-2.5-flash free tier = 5 RPM → 60/5 = 12s minimum, on prend 13s de marge)
 BACKOFF_SECONDS = 65.0  # > 1 min : laisse la fenêtre par minute se réinitialiser
 MAX_CONSECUTIVE_QUOTA = 3  # 3 back-offs ratés d'affilée ⇒ quota journalier épuisé
 
