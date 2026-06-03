@@ -1,5 +1,5 @@
 import html
-from datetime import datetime
+from datetime import datetime, timezone
 
 import httpx
 
@@ -79,21 +79,68 @@ def _format(jobs: list[Job], top: int = 5) -> str:
     return "\n".join(lines)
 
 
-def notify_new_jobs(jobs: list[Job]) -> None:
-    """Envoie une notification Telegram. Skip propre si non configuré ou si rien à signaler."""
-    if not jobs:
-        return
+def _days_since(dt: datetime | None) -> int | None:
+    """Nombre de jours écoulés depuis dt (tolère les datetimes naïfs venant de SQLite)."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - dt).days
+
+
+def _format_follow_ups(jobs: list[Job]) -> str:
+    """Message de rappel des relances à faire (candidatures postulées sans réponse)."""
+    n = len(jobs)
+    plural = "s" if n > 1 else ""
+    lines = [f"📌 <b>{n} relance{plural} à faire</b>", ""]
+
+    for job in jobs:
+        title = html.escape(job.title or "Sans titre")
+        company = html.escape(job.company or "")
+        url = html.escape(job.url or "", quote=True)
+        link = f'<a href="{url}">{title}</a>' if url else title
+        line = f"• {link}"
+        if company:
+            line += f" — {company}"
+        days = _days_since(job.applied_at)
+        if days is not None:
+            line += f" <i>(postulé il y a {days} j)</i>"
+        lines.append(line)
+
+    if settings.dashboard_url:
+        lines.append("")
+        lines.append(
+            f'<a href="{html.escape(settings.dashboard_url, quote=True)}">📊 Ouvrir le dashboard →</a>'
+        )
+    return "\n".join(lines)
+
+
+def _send(text: str) -> None:
+    """Envoie un message Telegram. Lève TelegramUnavailable si non configuré."""
     if not settings.telegram_enabled:
         raise TelegramUnavailable("telegram_enabled=False")
     if not settings.telegram_bot_token or not settings.telegram_chat_id:
         raise TelegramUnavailable("telegram_bot_token ou telegram_chat_id manquant")
-
     payload = {
         "chat_id": settings.telegram_chat_id,
-        "text": _format(jobs),
+        "text": text,
         "parse_mode": "HTML",
         "disable_web_page_preview": True,
     }
     url = API_URL.format(token=settings.telegram_bot_token)
     resp = httpx.post(url, json=payload, timeout=settings.request_timeout)
     resp.raise_for_status()
+
+
+def notify_new_jobs(jobs: list[Job]) -> None:
+    """Notifie les nouvelles offres. Skip propre si rien à signaler."""
+    if not jobs:
+        return
+    _send(_format(jobs))
+
+
+def notify_follow_ups(jobs: list[Job]) -> None:
+    """Notifie les relances à faire. Skip propre si rien à signaler."""
+    if not jobs:
+        return
+    _send(_format_follow_ups(jobs))

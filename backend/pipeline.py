@@ -1,3 +1,5 @@
+from sqlalchemy import or_
+
 from .config import settings
 from .db.database import SessionLocal, init_db
 from .db.models import Job
@@ -105,6 +107,36 @@ def _notify(new_ids: list[str]) -> None:
         print(f"[telegram] ERREUR: {exc!r}")
 
 
+def _notify_follow_ups() -> None:
+    """Rappelle les relances dues : candidatures postulées dont la date de relance est
+    passée et qui n'ont pas encore de réponse définitive."""
+    from datetime import datetime, timezone
+
+    from .notifications.telegram import TelegramUnavailable, notify_follow_ups
+
+    now = datetime.now(timezone.utc)
+    with SessionLocal() as session:
+        due = (
+            session.query(Job)
+            .filter(
+                Job.follow_up_at.isnot(None),
+                Job.follow_up_at <= now,
+                or_(Job.response.is_(None), Job.response == "pending"),
+            )
+            .order_by(Job.follow_up_at.asc())
+            .all()
+        )
+    if not due:
+        return
+    try:
+        notify_follow_ups(due)
+        print(f"[telegram] {len(due)} relance(s) rappelée(s)")
+    except TelegramUnavailable as exc:
+        print(f"[telegram] relances ignorées : {exc}")
+    except Exception as exc:  # une notif en échec ne doit pas casser le run
+        print(f"[telegram] ERREUR relances: {exc!r}")
+
+
 def run() -> list[Job]:
     init_db()
     raw = _collect()
@@ -116,4 +148,5 @@ def run() -> list[Job]:
     _tag_new()
     _extract_remaining()
     _notify(new_ids)
+    _notify_follow_ups()
     return new
