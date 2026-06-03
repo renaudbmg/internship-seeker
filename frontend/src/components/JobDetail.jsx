@@ -14,7 +14,7 @@ export default function JobDetail({ job, onClose }) {
   if (!job) return null;
 
   return (
-    <aside className="fixed inset-0 z-50 flex h-full flex-col gap-4 overflow-y-auto bg-white px-5 pb-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:static lg:z-auto lg:border-l lg:border-slate-200 lg:pt-5">
+    <aside className="fixed inset-0 z-50 flex h-full flex-col gap-4 overflow-y-auto overscroll-contain bg-white px-5 pb-5 pt-[max(1.25rem,env(safe-area-inset-top))] lg:static lg:z-auto lg:overscroll-auto lg:border-l lg:border-slate-200 lg:pt-5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <CompanyLogo src={job.logo_url} company={job.company} size={48} />

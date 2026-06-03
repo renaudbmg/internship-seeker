@@ -61,7 +61,7 @@ export default function App() {
           ))}
         </div>
         {view === "jobs" && (
-          <div className="mt-4">
+          <div className="mt-4 hidden lg:block">
             <StatsBar />
           </div>
         )}
