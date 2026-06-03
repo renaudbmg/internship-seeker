@@ -63,10 +63,6 @@ def _format(jobs: list[Job], top: int = 5) -> str:
             meta.append(f"<code>{source}</code>")
             lines.append("   " + " · ".join(meta))
 
-            if job.summary_ai:
-                summary = html.escape(job.summary_ai.strip()[:150])
-                lines.append(f"   <i>{summary}</i>")
-
     if n > top:
         rest = n - top
         lines.append("")

@@ -31,7 +31,7 @@ Offre :
 - Description : {description}
 
 Réponds STRICTEMENT en JSON avec ces clés :
-{{"score": <entier 0-100>, "summary": "<résumé en 2 phrases max>", "match_reasons": ["<raison>", ...]}}
+{{"score": <entier 0-100>, "match_reasons": ["<raison>", ...]}}
 """
 
 
@@ -75,7 +75,6 @@ class Scorer:
         data = json.loads(cleaned)
         return {
             "score": int(data.get("score", 0)),
-            "summary": str(data.get("summary", "")),
             "match_reasons": data.get("match_reasons", []),
         }
 
@@ -93,7 +92,6 @@ def score_pending(limit: int | None = None) -> int:
         def process(job: Job) -> None:
             result = scorer.score(job)
             job.score_ai = result["score"]
-            job.summary_ai = result["summary"]
             session.commit()  # commit par offre : un crash en cours de route ne perd rien
 
         scored, _ = run_quota_loop(pending, process, label="scorer")

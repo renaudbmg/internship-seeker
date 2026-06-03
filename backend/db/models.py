@@ -32,3 +32,9 @@ class Job(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     scraped_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     seen: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Suivi de candidature
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # auto à "applied"
+    follow_up_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # date de relance
+    # réponse reçue : None/pending = en attente, positive, negative, ghosted (sans réponse)
+    response: Mapped[str | None] = mapped_column(String, nullable=True)

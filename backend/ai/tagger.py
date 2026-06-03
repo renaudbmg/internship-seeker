@@ -36,7 +36,6 @@ Offre :
 Réponds STRICTEMENT en JSON avec EXACTEMENT ces clés :
 {{
   "score": <entier 0-100>,
-  "summary": "<résumé en 2 phrases max>",
   "match_reasons": ["<raison>"],
   "type_contrat": "<Stage | Alternance | CDD | CDI | VIE | Freelance | Autre | Non précisé>",
   "duree": "<ex: 6 mois | Non précisé>",
@@ -106,7 +105,6 @@ class Tagger:
 
         # Champs scoring
         score = int(data.get("score", 0))
-        summary = str(data.get("summary", ""))
         match_reasons = data.get("match_reasons", [])
         if not isinstance(match_reasons, list):
             match_reasons = []
@@ -122,7 +120,6 @@ class Tagger:
 
         return {
             "score": score,
-            "summary": summary,
             "match_reasons": match_reasons,
             "details": details,
         }
@@ -153,7 +150,6 @@ def tag_pending(limit: int | None = None) -> int:
         def process(job: Job) -> None:
             result = tagger.tag(job)
             job.score_ai = result["score"]
-            job.summary_ai = result["summary"]
             job.details_ai = json.dumps(result["details"], ensure_ascii=False)
             session.commit()  # commit par offre : un crash en cours de route ne perd rien
 

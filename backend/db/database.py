@@ -45,6 +45,9 @@ SessionLocal = sessionmaker(bind=engine, expire_on_commit=False, future=True)
 _ADDITIVE_COLUMNS: dict[str, str] = {
     "details_ai": "TEXT",
     "logo_url": "TEXT",
+    "applied_at": "DATETIME",
+    "follow_up_at": "DATETIME",
+    "response": "VARCHAR",
 }
 
 

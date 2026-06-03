@@ -64,6 +64,21 @@ export function useUpdateNotes() {
   });
 }
 
+export function useUpdateTracking() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, follow_up_at, response }) =>
+      request(`/jobs/${id}/tracking`, {
+        method: "PATCH",
+        body: JSON.stringify({ follow_up_at, response }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["jobs"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
+    },
+  });
+}
+
 export function useTriggerScrape() {
   return useMutation({
     mutationFn: () => request("/jobs/trigger-scrape", { method: "POST" }),

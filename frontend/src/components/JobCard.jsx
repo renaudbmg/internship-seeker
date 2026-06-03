@@ -1,4 +1,4 @@
-import { scoreColor, statusMeta } from "../ui.js";
+import { followUpDue, scoreColor, statusMeta } from "../ui.js";
 import CompanyLogo from "./CompanyLogo.jsx";
 
 const filled = (v) => v && v !== "Non précisé";
@@ -35,9 +35,6 @@ export default function JobCard({ job, selected, onSelect }) {
           {job.score_ai ?? "—"}
         </span>
       </div>
-      {job.summary_ai && (
-        <p className="mt-2 line-clamp-2 text-sm text-slate-500">{job.summary_ai}</p>
-      )}
       {chips.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {chips.map((c, i) => (
@@ -58,6 +55,11 @@ export default function JobCard({ job, selected, onSelect }) {
         {!job.seen && (
           <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-xs text-white">
             nouveau
+          </span>
+        )}
+        {followUpDue(job) && (
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+            ⏰ relance
           </span>
         )}
       </div>

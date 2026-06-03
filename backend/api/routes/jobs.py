@@ -1,14 +1,17 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from ...db.models import Job
 from ..deps import get_session
-from ..schemas import JobListOut, JobOut, NotesUpdate, StatusUpdate
+from ..schemas import JobListOut, JobOut, NotesUpdate, StatusUpdate, TrackingUpdate
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 VALID_STATUSES = {"to_review", "interested", "applied", "rejected"}
+VALID_RESPONSES = {"pending", "positive", "negative", "ghosted"}
 
 
 @router.get("", response_model=JobListOut)
@@ -65,6 +68,27 @@ def update_status(
     if job is None:
         raise HTTPException(status_code=404, detail="Offre introuvable")
     job.status = payload.status
+    # Premier passage à « postulé » : on date la candidature et on initialise le suivi.
+    if payload.status == "applied" and job.applied_at is None:
+        job.applied_at = datetime.now(timezone.utc)
+        if job.response is None:
+            job.response = "pending"
+    session.commit()
+    session.refresh(job)
+    return job
+
+
+@router.patch("/{job_id}/tracking", response_model=JobOut)
+def update_tracking(
+    job_id: str, payload: TrackingUpdate, session: Session = Depends(get_session)
+):
+    if payload.response is not None and payload.response not in VALID_RESPONSES:
+        raise HTTPException(status_code=422, detail=f"Réponse invalide : {payload.response}")
+    job = session.get(Job, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Offre introuvable")
+    job.follow_up_at = payload.follow_up_at
+    job.response = payload.response
     session.commit()
     session.refresh(job)
     return job

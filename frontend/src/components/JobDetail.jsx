@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useUpdateNotes, useUpdateStatus } from "../api.js";
-import { STATUSES, scoreColor } from "../ui.js";
+import { useUpdateNotes, useUpdateStatus, useUpdateTracking } from "../api.js";
+import { RESPONSES, STATUSES, followUpDue, formatDate, scoreColor, toDateInput } from "../ui.js";
 import CompanyLogo from "./CompanyLogo.jsx";
 
 export default function JobDetail({ job, onClose }) {
@@ -62,12 +62,7 @@ export default function JobDetail({ job, onClose }) {
         ))}
       </div>
 
-      {job.summary_ai && (
-        <div className="rounded-lg bg-amber-50 p-3 text-sm text-slate-700">
-          <p className="mb-1 font-semibold text-amber-700">Résumé IA</p>
-          {job.summary_ai}
-        </div>
-      )}
+      {job.status === "applied" && <JobTracking job={job} />}
 
       {job.details_ai && <JobFiche details={job.details_ai} />}
 
@@ -94,6 +89,65 @@ export default function JobDetail({ job, onClose }) {
         </p>
       </div>
     </aside>
+  );
+}
+
+function JobTracking({ job }) {
+  const updateTracking = useUpdateTracking();
+  const due = followUpDue(job);
+
+  const setFollowUp = (value) =>
+    updateTracking.mutate({
+      id: job.id,
+      follow_up_at: value || null,
+      response: job.response || "pending",
+    });
+
+  const setResponse = (value) =>
+    updateTracking.mutate({
+      id: job.id,
+      follow_up_at: job.follow_up_at || null,
+      response: value,
+    });
+
+  return (
+    <div className="rounded-lg border border-green-200 bg-green-50/50 p-3 text-sm">
+      <p className="mb-2 font-semibold text-green-700">Suivi de candidature</p>
+
+      <p className="mb-3 text-slate-600">
+        Postulé le <span className="font-medium">{formatDate(job.applied_at) || "—"}</span>
+      </p>
+
+      <label className="mb-1 block text-xs uppercase tracking-wide text-slate-400">
+        Date de relance
+      </label>
+      <input
+        type="date"
+        value={toDateInput(job.follow_up_at)}
+        onChange={(e) => setFollowUp(e.target.value)}
+        className="mb-1 w-full rounded-lg border border-slate-300 p-1.5 text-sm"
+      />
+      {due && (
+        <p className="mb-3 font-medium text-amber-700">⏰ Relance à faire</p>
+      )}
+
+      <p className="mb-1 mt-3 text-xs uppercase tracking-wide text-slate-400">Réponse</p>
+      <div className="flex flex-wrap gap-1.5">
+        {RESPONSES.map((r) => (
+          <button
+            key={r.value}
+            onClick={() => setResponse(r.value)}
+            className={`rounded-lg px-2.5 py-1 text-xs ${
+              (job.response || "pending") === r.value
+                ? "ring-2 ring-green-500 " + r.color
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
