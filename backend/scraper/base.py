@@ -95,11 +95,6 @@ def should_exclude_title(
     return title_matches_any(title, exclude)
 
 
-# Rétro-compat : ancien nom (exclusion simple sans signal positif).
-def title_has_excluded_term(title: str | None, terms: list[str]) -> bool:
-    return title_matches_any(title, terms)
-
-
 def is_france(location_text: str | None, country_code: str | None = None) -> bool:
     """True si l'offre est localisée en France (code pays 'fr' ou ville/France dans le texte)."""
     if country_code and country_code.strip().lower() == "fr":

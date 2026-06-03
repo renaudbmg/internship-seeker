@@ -75,8 +75,8 @@ class LinkedInScraper(BaseScraper):
 
     def _parse_cards(self, html: str) -> list[RawJob]:
         soup = BeautifulSoup(html, "html.parser")
-        exclude = self.settings.linkedin_title_exclude_list
-        keep = self.settings.linkedin_title_keep_list
+        exclude = self.settings.title_exclude_list
+        keep = self.settings.title_keep_list
         out: list[RawJob] = []
         for card in soup.select("div.base-card"):
             urn = card.get("data-entity-urn", "")

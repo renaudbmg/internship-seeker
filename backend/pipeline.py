@@ -1,7 +1,7 @@
 from .config import settings
 from .db.database import SessionLocal, init_db
 from .db.models import Job
-from .scraper.base import RawJob
+from .scraper.base import RawJob, should_exclude_title
 from .scraper.registry import build_scrapers
 
 
@@ -18,11 +18,21 @@ def _collect() -> list[RawJob]:
 
 
 def _store(raw_jobs: list[RawJob]) -> list[Job]:
-    """Déduplique par hash d'id et n'insère que les offres jamais vues."""
+    """Déduplique par hash d'id et n'insère que les offres jamais vues.
+
+    Filtre aussi les titres senior (toutes sources) AVANT insertion : une offre
+    écartée n'est jamais stockée ni scorée, ce qui préserve le quota Gemini.
+    """
+    exclude = settings.title_exclude_list
+    keep = settings.title_keep_list
     new: list[Job] = []
+    excluded = 0
     with SessionLocal() as session:
         seen_ids: set[str] = set()
         for rj in raw_jobs:
+            if should_exclude_title(rj.title, exclude, keep):
+                excluded += 1
+                continue
             jid = rj.job_id()
             if jid in seen_ids:
                 continue  # doublon au sein du même run
@@ -45,6 +55,8 @@ def _store(raw_jobs: list[RawJob]) -> list[Job]:
             session.add(job)
             new.append(job)
         session.commit()
+    if excluded:
+        print(f"[store] {excluded} offres écartées (titre senior, hors signal stage)")
     return new
 
 
