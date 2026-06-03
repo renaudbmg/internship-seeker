@@ -77,28 +77,31 @@ export default function App() {
         </main>
       ) : (
         <>
-          <div className="border-b border-slate-200 bg-white px-6 py-3">
-            <Filters filters={filters} onChange={setFilters} />
-          </div>
-
           <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_minmax(360px,40%)]">
-            <section className="overflow-y-auto p-6">
-              {isLoading && <p className="text-slate-500">Chargement…</p>}
-              {isError && (
-                <p className="text-red-600">Erreur de connexion à l'API (port 8000).</p>
-              )}
-              {!isLoading && items.length === 0 && (
-                <p className="text-slate-500">Aucune offre ne correspond aux filtres.</p>
-              )}
-              <div className="flex flex-col gap-3">
-                {items.map((job) => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    selected={job.id === selectedId}
-                    onSelect={(j) => setSelectedId(j.id)}
-                  />
-                ))}
+            <section className="overflow-y-auto">
+              {/* Filtres dans le flux scrollable : ils défilent avec la liste sur
+                  mobile (gain de place), mais restent épinglés en haut sur desktop. */}
+              <div className="border-b border-slate-200 bg-white px-6 py-3 lg:sticky lg:top-0 lg:z-10">
+                <Filters filters={filters} onChange={setFilters} />
+              </div>
+              <div className="p-6">
+                {isLoading && <p className="text-slate-500">Chargement…</p>}
+                {isError && (
+                  <p className="text-red-600">Erreur de connexion à l'API (port 8000).</p>
+                )}
+                {!isLoading && items.length === 0 && (
+                  <p className="text-slate-500">Aucune offre ne correspond aux filtres.</p>
+                )}
+                <div className="flex flex-col gap-3">
+                  {items.map((job) => (
+                    <JobCard
+                      key={job.id}
+                      job={job}
+                      selected={job.id === selectedId}
+                      onSelect={(j) => setSelectedId(j.id)}
+                    />
+                  ))}
+                </div>
               </div>
             </section>
 
