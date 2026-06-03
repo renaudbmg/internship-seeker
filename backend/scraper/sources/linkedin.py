@@ -1,9 +1,51 @@
+import re
 import time
 
 import httpx
 from bs4 import BeautifulSoup
 
 from ..base import BaseScraper, RawJob, should_exclude_title
+
+# Endpoint « guest » de la description d'une offre (page jobPosting).
+DESC_URL = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
+# Sélecteurs du corps de la description, du plus précis au plus large (résilience).
+_DESC_SELECTORS = (
+    "div.show-more-less-html__markup",
+    "section.description div.description__text",
+    ".description__text",
+)
+# L'id numérique d'une offre LinkedIn est la longue suite de chiffres en fin d'URL.
+_JOBID_RE = re.compile(r"(\d{7,})")
+
+
+def linkedin_headers(settings) -> dict[str, str]:
+    return {
+        "User-Agent": settings.user_agent,
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+    }
+
+
+def linkedin_job_id_from_url(url: str | None) -> str | None:
+    """Extrait l'id numérique d'une offre depuis l'URL de la carte (…-4412806676)."""
+    if not url:
+        return None
+    found = _JOBID_RE.findall(url)
+    return found[-1] if found else None
+
+
+def fetch_linkedin_description(client: httpx.Client, job_id: str) -> str:
+    """Récupère le texte de la description d'une offre. Lève HTTPStatusError sur 429."""
+    resp = client.get(DESC_URL.format(job_id=job_id))
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "html.parser")
+    for selector in _DESC_SELECTORS:
+        el = soup.select_one(selector)
+        if el:
+            text = el.get_text(" ", strip=True)
+            if text:
+                return text
+    return ""
 
 
 class LinkedInScraper(BaseScraper):
@@ -124,15 +166,12 @@ class LinkedInScraper(BaseScraper):
     def _enrich_descriptions(self, client: httpx.Client, cards: list[RawJob]) -> None:
         for card in cards[: self.settings.linkedin_max_descriptions]:
             try:
-                resp = client.get(self.DESC_URL.format(job_id=card.source_id))
-                if resp.status_code == 429:
+                card.description = fetch_linkedin_description(client, card.source_id)
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 429:
                     print("[linkedin] 429 rate-limit sur les descriptions, on arrête l'enrichissement")
                     return
-                resp.raise_for_status()
+                continue
             except httpx.HTTPError:
                 continue
-            soup = BeautifulSoup(resp.text, "html.parser")
-            markup = soup.select_one("div.show-more-less-html__markup")
-            if markup:
-                card.description = markup.get_text(" ", strip=True)
             time.sleep(0.4)

@@ -62,6 +62,78 @@ def _store(raw_jobs: list[RawJob]) -> list[Job]:
     return new
 
 
+def _backfill_descriptions() -> None:
+    """Récupère les descriptions LinkedIn manquantes (les plus récentes d'abord).
+
+    L'enrichissement au scrape se faisait 429 trop vite (budget gaspillé sur des
+    doublons). Ici on cible UNIQUEMENT les offres LinkedIn sans description, on espace
+    les requêtes et on s'arrête sur 429 persistant — le reste se complète au run suivant.
+    Une offre déjà taguée SANS description est réinitialisée (score + fiche) pour être
+    re-taguée sur du contenu réel (sinon la fiche IA reste « inventée » à partir du titre).
+    """
+    if not settings.linkedin_description_backfill:
+        return
+    import time
+
+    import httpx
+
+    from .scraper.sources.linkedin import (
+        fetch_linkedin_description,
+        linkedin_headers,
+        linkedin_job_id_from_url,
+    )
+
+    filled = 0
+    consecutive_429 = 0
+    with SessionLocal() as session:
+        jobs = (
+            session.query(Job)
+            .filter(
+                Job.source == "linkedin",
+                or_(Job.description.is_(None), Job.description == ""),
+            )
+            .order_by(Job.scraped_at.desc())
+            .limit(settings.linkedin_backfill_max)
+            .all()
+        )
+        if not jobs:
+            return
+        print(f"[backfill] {len(jobs)} offres LinkedIn sans description")
+        with httpx.Client(
+            timeout=settings.request_timeout,
+            headers=linkedin_headers(settings),
+            follow_redirects=True,
+        ) as client:
+            for job in jobs:
+                jid = linkedin_job_id_from_url(job.url)
+                if not jid:
+                    continue
+                try:
+                    desc = fetch_linkedin_description(client, jid)
+                except httpx.HTTPStatusError as exc:
+                    if exc.response.status_code == 429:
+                        consecutive_429 += 1
+                        if consecutive_429 >= 3:
+                            print(f"[backfill] 429 LinkedIn persistant après {filled} — on arrête")
+                            break
+                        time.sleep(20)
+                        continue
+                    continue
+                except Exception:
+                    continue
+                consecutive_429 = 0
+                if desc:
+                    job.description = desc
+                    # déjà taguée sans description → re-tag propre sur contenu réel
+                    if job.score_ai is not None:
+                        job.score_ai = None
+                        job.details_ai = None
+                    filled += 1
+                    session.commit()
+                time.sleep(1.5)
+    print(f"[backfill] {filled} descriptions LinkedIn récupérées")
+
+
 def _tag_new() -> None:
     """Scoring + extraction combinés en 1 appel Gemini par offre (tagger.py).
 
@@ -145,6 +217,7 @@ def run() -> list[Job]:
     print(f"\n{len(new)} nouvelles offres stockées (sur {len(raw)} récupérées).")
     for job in new[:10]:
         print(f"  • [{job.source}] {job.title} — {job.company} ({job.location})")
+    _backfill_descriptions()
     _tag_new()
     _extract_remaining()
     _notify(new_ids)

@@ -13,8 +13,15 @@ class Settings(BaseSettings):
     # Source: LinkedIn Jobs via endpoint public « guest » (non officiel)
     linkedin_enabled: bool = True
     linkedin_max_per_keyword: int = 25  # ~10 offres par page
-    linkedin_fetch_descriptions: bool = True
-    linkedin_max_descriptions: int = 50  # limite anti rate-limit
+    # Enrichissement au scrape DÉSACTIVÉ : il gaspillait le budget anti-429 sur des
+    # doublons déjà en base. Les descriptions sont récupérées par le backfill persistant
+    # (pipeline._backfill_descriptions), qui ne cible que les offres SANS description.
+    linkedin_fetch_descriptions: bool = False
+    linkedin_max_descriptions: int = 50  # limite anti rate-limit (chemin scrape, si réactivé)
+    # Backfill des descriptions LinkedIn manquantes : nb max d'offres traitées par run
+    # (les plus récentes d'abord). Le 429 LinkedIn plafonne en pratique bien avant.
+    linkedin_description_backfill: bool = True
+    linkedin_backfill_max: int = 60
     # Filtre serveur LinkedIn f_E (niveau d'expérience) : 1=Stage, 2=Débutant,
     # 3=Confirmé, 4=Senior, 5=Directeur, 6=Exécutif. "1,2" = stage + entrée de carrière.
     # → LinkedIn ne renvoie que ces niveaux : pool déjà filtré avant import/scoring.
