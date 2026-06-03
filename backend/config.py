@@ -58,8 +58,9 @@ class Settings(BaseSettings):
     wttj_enabled: bool = True
     wttj_max_per_keyword: int = 50
 
-    # Source: JobTeaser (scraping HTML)
-    jobteaser_enabled: bool = True
+    # Source: JobTeaser (scraping HTML) — désactivé : leur site renvoie 404/403 aux scrapers.
+    # Leur URL /fr/offres-d-emploi n'existe plus et /fr/job-offers bloque les bots.
+    jobteaser_enabled: bool = False
     jobteaser_max_per_keyword: int = 50
 
     # Notifications Telegram (Sprint 5) — bot API directe

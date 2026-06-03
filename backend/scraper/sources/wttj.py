@@ -17,13 +17,19 @@ _ALGOLIA_INDEX = "wttj_production_jobs_fr"
 _ALGOLIA_URL = f"https://{_ALGOLIA_APP_ID.lower()}-dsn.algolia.net/1/indexes/{_ALGOLIA_INDEX}/query"
 _JOBS_PAGE = "https://www.welcometothejungle.com/fr/jobs"
 
-# Patterns pour retrouver la clé dans le HTML si elle n'est pas dans __NEXT_DATA__
+# Patterns pour retrouver la clé Algolia dans le HTML ou les bundles JS.
+# La clé est une chaîne alphanumérique (pas forcément hex pur) de 32 caractères,
+# souvent trouvée dans les chunks Next.js près de l'App ID "RQFG0FUOMC".
 _KEY_PATTERNS = [
-    re.compile(r'"algoliaApiKey"\s*:\s*"([a-f0-9]{32})"'),
-    re.compile(r'"algolia_api_key"\s*:\s*"([a-f0-9]{32})"'),
-    re.compile(r'"searchApiKey"\s*:\s*"([a-f0-9]{32})"'),
-    re.compile(r'algolia[_A-Z]*[Kk]ey["\s:]+([a-f0-9]{32})'),
+    # Format JSON/objet : "algoliaApiKey":"xxxxx"
+    re.compile(r'"(?:algoliaApiKey|algolia_api_key|searchApiKey|apiKey)"\s*[,:]\s*"([A-Za-z0-9]{20,40})"'),
+    # Format JS minifié : apiKey:"xxxxx" ou apiKey:'xxxxx'
+    re.compile(r'apiKey["\s:\']+([A-Za-z0-9]{20,40})["\s\']+'),
+    # Proche de l'App ID (dans les bundles JS minifiés)
+    re.compile(r'RQFG0FUOMC.{0,100}?([A-Za-z0-9]{32})'),
+    re.compile(r'([A-Za-z0-9]{32}).{0,100}?RQFG0FUOMC'),
 ]
+_BASE_URL = "https://www.welcometothejungle.com"
 
 
 class WTTJScraper(BaseScraper):
@@ -63,24 +69,42 @@ class WTTJScraper(BaseScraper):
             resp = client.get(_JOBS_PAGE)
             resp.raise_for_status()
             html = resp.text
-
-            # 1. Cherche dans __NEXT_DATA__ (Next.js injecte les props serveur ici)
             soup = BeautifulSoup(html, "html.parser")
+
+            # 1. __NEXT_DATA__ : props injectées côté serveur
             script_tag = soup.find("script", {"id": "__NEXT_DATA__"})
             if script_tag and script_tag.string:
                 try:
-                    data = json.loads(script_tag.string)
-                    key = self._dig_algolia_key(data)
+                    key = self._dig_algolia_key(json.loads(script_tag.string))
                     if key:
                         return key
                 except (json.JSONDecodeError, ValueError):
                     pass
 
-            # 2. Cherche dans tous les <script> avec des regex
+            # 2. Regex dans le HTML inline (variables window.*, balises <script>)
             for pattern in _KEY_PATTERNS:
                 m = pattern.search(html)
-                if m:
+                if m and m.group(1) != _ALGOLIA_APP_ID:
                     return m.group(1)
+
+            # 3. Bundles JS Next.js : la clé Algolia est souvent dans un chunk _app ou pages.
+            # On récupère les URLs de script, on cherche dans ceux qui contiennent l'App ID.
+            script_urls = [
+                tag["src"] for tag in soup.find_all("script", src=True)
+                if "_next/static" in (tag.get("src") or "")
+            ]
+            for src in script_urls[:10]:
+                url = src if src.startswith("http") else _BASE_URL + src
+                try:
+                    bundle = client.get(url, timeout=15).text
+                    if _ALGOLIA_APP_ID not in bundle:
+                        continue  # ce chunk ne contient pas l'App ID → skip
+                    for pattern in _KEY_PATTERNS:
+                        m = pattern.search(bundle)
+                        if m and m.group(1) != _ALGOLIA_APP_ID:
+                            return m.group(1)
+                except Exception:
+                    continue
 
         except Exception as exc:
             print(f"[wttj] erreur extraction clé Algolia: {exc!r}")
