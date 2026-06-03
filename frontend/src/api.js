@@ -37,45 +37,69 @@ export function useProgress() {
   return useQuery({ queryKey: ["progress"], queryFn: () => request("/jobs/progress") });
 }
 
+// Met à jour instantanément l'offre {id} dans tous les caches de liste ["jobs", …],
+// en appliquant `patch` (les champs modifiés). Renvoie le snapshot pour rollback.
+function patchJobInCache(qc, id, patch) {
+  const previous = qc.getQueriesData({ queryKey: ["jobs"] });
+  qc.setQueriesData({ queryKey: ["jobs"] }, (old) => {
+    if (!old?.items) return old;
+    return {
+      ...old,
+      items: old.items.map((j) => (j.id === id ? { ...j, ...patch } : j)),
+    };
+  });
+  return previous;
+}
+
+// Fabrique une mutation « optimiste » : l'UI reflète le changement immédiatement
+// (onMutate), rollback en cas d'erreur, et resync discrète en arrière-plan (onSettled).
+function makeOptimisticMutation(qc, { mutationFn, buildPatch, invalidateStats }) {
+  return useMutation({
+    mutationFn,
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: ["jobs"] });
+      const previous = patchJobInCache(qc, vars.id, buildPatch(vars));
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      ctx?.previous?.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["jobs"] });
+      if (invalidateStats) qc.invalidateQueries({ queryKey: ["stats"] });
+    },
+  });
+}
+
 export function useUpdateStatus() {
   const qc = useQueryClient();
-  return useMutation({
+  return makeOptimisticMutation(qc, {
     mutationFn: ({ id, status }) =>
-      request(`/jobs/${id}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status }),
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["jobs"] });
-      qc.invalidateQueries({ queryKey: ["stats"] });
-    },
+      request(`/jobs/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+    buildPatch: ({ status }) => ({ status }),
+    invalidateStats: true,
   });
 }
 
 export function useUpdateNotes() {
   const qc = useQueryClient();
-  return useMutation({
+  return makeOptimisticMutation(qc, {
     mutationFn: ({ id, notes }) =>
-      request(`/jobs/${id}/notes`, {
-        method: "PATCH",
-        body: JSON.stringify({ notes }),
-      }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
+      request(`/jobs/${id}/notes`, { method: "PATCH", body: JSON.stringify({ notes }) }),
+    buildPatch: ({ notes }) => ({ notes }),
   });
 }
 
 export function useUpdateTracking() {
   const qc = useQueryClient();
-  return useMutation({
+  return makeOptimisticMutation(qc, {
     mutationFn: ({ id, follow_up_at, response }) =>
       request(`/jobs/${id}/tracking`, {
         method: "PATCH",
         body: JSON.stringify({ follow_up_at, response }),
       }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["jobs"] });
-      qc.invalidateQueries({ queryKey: ["stats"] });
-    },
+    buildPatch: ({ follow_up_at, response }) => ({ follow_up_at, response }),
+    invalidateStats: true,
   });
 }
 

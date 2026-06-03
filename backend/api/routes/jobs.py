@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from ...db.models import Job
@@ -41,7 +41,7 @@ def list_jobs(
             )
         )
 
-    total = len(session.execute(stmt).scalars().all())
+    total = session.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
     stmt = stmt.order_by(Job.score_ai.is_(None), Job.score_ai.desc(), Job.scraped_at.desc())
     items = session.execute(stmt.limit(limit).offset(offset)).scalars().all()
     return JobListOut(total=total, items=items)
