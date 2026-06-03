@@ -2,16 +2,17 @@ name: Scrape quotidien
 
 on:
   schedule:
-    # 08:00 UTC. IMPORTANT : le quota gratuit Gemini se réinitialise à minuit
-    # heure du Pacifique (= 07:00 UTC l'été). On lance APRÈS ce reset pour
-    # disposer du quota plein du jour (sinon le run tombe sur le quota épuisé de la veille).
+    # Le quota gratuit Gemini se réinitialise à minuit heure du Pacifique
+    # (= 07:00 UTC l'été). On lance APRÈS ce reset pour disposer du quota plein.
+    # Deux passages par jour pour drainer le backlog de tagging sur la journée.
     - cron: "0 8 * * *"
+    - cron: "0 14 * * *"
   workflow_dispatch: {} # déclenchement manuel depuis l'onglet Actions
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
 
