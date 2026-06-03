@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import json
-import time
 
 from ..config import settings
 from ..db.database import SessionLocal, init_db
 from ..db.models import Job
-from .quota import is_quota_error
+from .quota import run_quota_loop
 
 # Champs normés extraits pour chaque offre. Scalaires -> "Non précisé" si absent,
 # listes -> [] si absent. Pensé pour comparer les offres d'un coup d'œil.
@@ -102,28 +101,18 @@ def extract_pending(limit: int | None = None) -> int:
     """Extrait les champs normés des offres dont details_ai est NULL. Renvoie le nombre traité."""
     init_db()
     extractor = Extractor()  # lève ExtractionUnavailable si pas de clé
-    done = 0
     with SessionLocal() as session:
         query = session.query(Job).filter(Job.details_ai.is_(None))
         if limit:
             query = query.limit(limit)
         pending = query.all()
-        for job in pending:
-            try:
-                result = extractor.extract(job)
-            except Exception as exc:
-                if is_quota_error(exc):
-                    # quota journalier Gemini épuisé : on stoppe, le reste reste en file
-                    print(f"[extractor] quota Gemini atteint après {done} offres — reste en file")
-                    break
-                # une offre qui échoue (autre cause) ne bloque pas les autres
-                print(f"[extractor] échec « {job.title[:40]} »: {exc!r}")
-                time.sleep(5)
-                continue
+
+        def process(job: Job) -> None:
+            result = extractor.extract(job)
             job.details_ai = json.dumps(result, ensure_ascii=False)
-            done += 1
             session.commit()  # commit par offre : un crash en cours de route ne perd rien
-            time.sleep(5)  # free tier = 15 req/min → 1 req / 4s minimum
+
+        done, _ = run_quota_loop(pending, process, label="extractor")
         print(f"[extractor] {done} offres enrichies sur {len(pending)} en attente")
     return done
 

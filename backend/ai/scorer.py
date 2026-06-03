@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import json
-import time
 
 from ..config import settings
 from ..db.database import SessionLocal, init_db
 from ..db.models import Job
-from .quota import is_quota_error
+from .quota import run_quota_loop
 
 USER_PROFILE = """\
 Étudiant ingénieur civil des Mines de Nancy, spécialisation aide à la décision / data analytics.
@@ -85,29 +84,19 @@ def score_pending(limit: int | None = None) -> int:
     """Score les offres en base dont score_ai est NULL. Renvoie le nombre scoré."""
     init_db()
     scorer = Scorer()  # lève ScoringUnavailable si pas de clé
-    scored = 0
     with SessionLocal() as session:
         query = session.query(Job).filter(Job.score_ai.is_(None))
         if limit:
             query = query.limit(limit)
         pending = query.all()
-        for job in pending:
-            try:
-                result = scorer.score(job)
-            except Exception as exc:
-                if is_quota_error(exc):
-                    # quota journalier Gemini épuisé : on stoppe, le reste reste en file
-                    print(f"[scorer] quota Gemini atteint après {scored} offres — reste en file")
-                    break
-                # une offre qui échoue (autre cause) ne bloque pas les autres
-                print(f"[scorer] échec « {job.title[:40]} »: {exc!r}")
-                time.sleep(5)
-                continue
+
+        def process(job: Job) -> None:
+            result = scorer.score(job)
             job.score_ai = result["score"]
             job.summary_ai = result["summary"]
-            scored += 1
             session.commit()  # commit par offre : un crash en cours de route ne perd rien
-            time.sleep(5)  # free tier = 15 req/min → 1 req / 4s minimum
+
+        scored, _ = run_quota_loop(pending, process, label="scorer")
     print(f"[scorer] {scored} offres scorées sur {len(pending)} en attente")
     return scored
 
