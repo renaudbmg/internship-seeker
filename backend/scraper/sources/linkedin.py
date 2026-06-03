@@ -3,7 +3,7 @@ import time
 import httpx
 from bs4 import BeautifulSoup
 
-from ..base import BaseScraper, RawJob, title_has_excluded_term
+from ..base import BaseScraper, RawJob, should_exclude_title
 
 
 class LinkedInScraper(BaseScraper):
@@ -76,6 +76,7 @@ class LinkedInScraper(BaseScraper):
     def _parse_cards(self, html: str) -> list[RawJob]:
         soup = BeautifulSoup(html, "html.parser")
         exclude = self.settings.linkedin_title_exclude_list
+        keep = self.settings.linkedin_title_keep_list
         out: list[RawJob] = []
         for card in soup.select("div.base-card"):
             urn = card.get("data-entity-urn", "")
@@ -85,8 +86,8 @@ class LinkedInScraper(BaseScraper):
             title_el = card.select_one("h3.base-search-card__title")
             title = title_el.get_text(strip=True) if title_el else ""
             # Filtre client : on écarte les titres senior AVANT stockage/scoring,
-            # le tag f_E de LinkedIn laissant passer des postes hors stage.
-            if title_has_excluded_term(title, exclude):
+            # SAUF si un signal positif (stage, alternance…) est présent.
+            if should_exclude_title(title, exclude, keep):
                 self._excluded += 1
                 continue
             company_el = card.select_one("h4.base-search-card__subtitle")

@@ -20,11 +20,18 @@ class Settings(BaseSettings):
     # → LinkedIn ne renvoie que ces niveaux : pool déjà filtré avant import/scoring.
     linkedin_experience_level: str | None = "1,2"
     # Filtre client : titres rejetés AVANT stockage (le tag f_E de LinkedIn est imparfait
-    # et laisse passer des postes senior). Liste de termes séparés par des virgules,
-    # rejet par correspondance de mot entier (insensible à la casse).
+    # et laisse passer des postes senior). Correspondance par mot entier, casse ignorée.
+    # NB: "responsable" / "manager" volontairement absents (trop ambigus : un stage peut
+    # être « Stage Responsable… »). Ils sont gérés par le signal positif ci-dessous.
     linkedin_title_exclude: str = (
-        "senior,confirmé,confirmée,expérimenté,expérimentée,lead,manager,responsable,"
+        "senior,confirmé,confirmée,expérimenté,expérimentée,lead,"
         "directeur,directrice,head of,principal,chef de,expert,architecte,cdi,vie,v.i.e"
+    )
+    # Signaux positifs : si le titre contient un de ces termes, l'offre est CONSERVÉE
+    # même si elle matche un terme d'exclusion (« Stage Responsable événementiel » → gardée).
+    linkedin_title_keep: str = (
+        "stage,stagiaire,intern,internship,alternance,alternant,alternante,"
+        "apprenti,apprentie,apprentissage,pfe,fin d'études,fin d'etudes"
     )
 
     # Source: The Muse (gratuite, sans clé) — socle de secours, désactivé par défaut
@@ -100,6 +107,10 @@ class Settings(BaseSettings):
     @property
     def linkedin_title_exclude_list(self) -> list[str]:
         return [t.strip() for t in self.linkedin_title_exclude.split(",") if t.strip()]
+
+    @property
+    def linkedin_title_keep_list(self) -> list[str]:
+        return [t.strip() for t in self.linkedin_title_keep.split(",") if t.strip()]
 
 
 settings = Settings()

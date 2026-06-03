@@ -62,8 +62,8 @@ _FR_HINTS = (
 )
 
 
-def title_has_excluded_term(title: str | None, terms: list[str]) -> bool:
-    """True si le titre contient un des termes d'exclusion (mot entier, casse ignorée).
+def title_matches_any(title: str | None, terms: list[str]) -> bool:
+    """True si le titre contient un des termes (mot entier, casse ignorée).
 
     Correspondance par frontière de mot : "cdi" ne matche PAS "Cdiscount", mais matche
     "Stage CDI". Gère les accents (é, è… sont des caractères de mot en regex Unicode).
@@ -78,6 +78,26 @@ def title_has_excluded_term(title: str | None, terms: list[str]) -> bool:
         if re.search(rf"(?<!\w){re.escape(t)}(?!\w)", low):
             return True
     return False
+
+
+def should_exclude_title(
+    title: str | None, exclude: list[str], keep: list[str]
+) -> bool:
+    """True si le titre doit être écarté.
+
+    Un signal positif (stage, alternance, PFE…) l'emporte : une offre dont le titre
+    porte un de ces termes est conservée même si elle contient un terme d'exclusion
+    (ex. « Stage Responsable événementiel » → gardée). Sinon, on écarte dès qu'un
+    terme d'exclusion senior est présent (ex. « Responsable événementiel » → écartée).
+    """
+    if title_matches_any(title, keep):
+        return False
+    return title_matches_any(title, exclude)
+
+
+# Rétro-compat : ancien nom (exclusion simple sans signal positif).
+def title_has_excluded_term(title: str | None, terms: list[str]) -> bool:
+    return title_matches_any(title, terms)
 
 
 def is_france(location_text: str | None, country_code: str | None = None) -> bool:
