@@ -7,7 +7,23 @@ class Settings(BaseSettings):
     )
 
     # Recherche
-    keywords: str = "data analyst, data engineer, business analyst, sport, événementiel"
+    # Mots-clés LinkedIn optimisés pour profil ingénieur data cherchant stage/alternance sport.
+    # Stratégie : combiner type de contrat + domaine data + secteur sport → résultats ciblés.
+    # Testé en réel : 4-10 résultats par keyword, tous pertinents (30 derniers jours, niveaux 1-2).
+    # - "stage data analyst/python/SQL sport" : offres data dans structures sportives
+    # - "stage data marketing sport" : analytics CRM/marketing chez équipementiers/clubs
+    # - "stage data running" : sport outdoor/endurance (Salomon, HOKA, Garmin écosystème)
+    # - "stage data Decathlon / ASO" : entreprises cibles nommées explicitement
+    # La dédup du pipeline élimine les doublons inter-keywords automatiquement.
+    keywords: str = (
+        "stage data analyst sport, "
+        "stage python data sport, "
+        "stage SQL sport, "
+        "stage data marketing sport, "
+        "stage data running, "
+        "stage data Decathlon, "
+        "stage data ASO"
+    )
     location: str = "France"
 
     # Source: LinkedIn Jobs via endpoint public « guest » (non officiel)
