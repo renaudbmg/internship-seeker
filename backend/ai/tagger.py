@@ -139,7 +139,7 @@ def tag_pending(limit: int | None = None) -> int:
         # (et donc scorées avant la notification Telegram du matin).
         query = (
             session.query(Job)
-            .filter(Job.score_ai.is_(None))
+            .filter(Job.score_ai.is_(None), Job.hidden.isnot(True))
             .order_by(Job.scraped_at.desc())
         )
         if limit:

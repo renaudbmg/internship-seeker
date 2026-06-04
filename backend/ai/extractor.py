@@ -102,7 +102,7 @@ def extract_pending(limit: int | None = None) -> int:
     init_db()
     extractor = Extractor()  # lève ExtractionUnavailable si pas de clé
     with SessionLocal() as session:
-        query = session.query(Job).filter(Job.details_ai.is_(None))
+        query = session.query(Job).filter(Job.details_ai.is_(None), Job.hidden.isnot(True))
         if limit:
             query = query.limit(limit)
         pending = query.all()
