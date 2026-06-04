@@ -1,0 +1,11 @@
+# Config lint déterministe pour le CI.
+line-length = 120
+target-version = "py312"
+
+[lint]
+# E/F (pyflakes + pycodestyle), I (imports), UP (pyupgrade), B (bugbear).
+select = ["E", "F", "I", "UP", "B"]
+ignore = [
+    "E501",  # longueur de ligne gérée par le formatteur, pas bloquant
+    "B008",  # Depends() en valeur par défaut = idiome FastAPI
+]

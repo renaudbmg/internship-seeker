@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -7,7 +7,7 @@ from .database import Base
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class Job(Base):
@@ -23,7 +23,6 @@ class Job(Base):
     # URL du logo entreprise fournie par la source (LinkedIn) ; sinon NULL → repli initiales.
     logo_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    summary_ai: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Score heuristique local (étage 1, gratuit) : pertinence provisoire 0-100 calculée
     # au stockage. Sert de classement par défaut + priorité de passage Gemini.
     score_heuristic: Mapped[int | None] = mapped_column(Integer, nullable=True)

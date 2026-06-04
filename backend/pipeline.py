@@ -1,3 +1,5 @@
+from datetime import UTC
+
 from sqlalchemy import or_
 
 from .ai.heuristic import heuristic_score
@@ -203,11 +205,11 @@ def _notify(new_ids: list[str]) -> None:
 def _notify_follow_ups() -> None:
     """Rappelle les relances dues : candidatures postulées dont la date de relance est
     passée et qui n'ont pas encore de réponse définitive."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from .notifications.telegram import TelegramUnavailable, notify_follow_ups
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     with SessionLocal() as session:
         due = (
             session.query(Job)

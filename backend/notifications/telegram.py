@@ -1,5 +1,5 @@
 import html
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 
@@ -84,8 +84,8 @@ def _days_since(dt: datetime | None) -> int | None:
     if dt is None:
         return None
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return (datetime.now(timezone.utc) - dt).days
+        dt = dt.replace(tzinfo=UTC)
+    return (datetime.now(UTC) - dt).days
 
 
 def _format_follow_ups(jobs: list[Job]) -> str:

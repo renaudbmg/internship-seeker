@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
@@ -86,7 +86,7 @@ def update_status(
     job.status = payload.status
     # Premier passage à « postulé » : on date la candidature et on initialise le suivi.
     if payload.status == "applied" and job.applied_at is None:
-        job.applied_at = datetime.now(timezone.utc)
+        job.applied_at = datetime.now(UTC)
         if job.response is None:
             job.response = "pending"
     session.commit()

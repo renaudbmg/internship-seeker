@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import Callable
+from collections.abc import Callable
 
 # Gemini free tier (depuis la coupe Google du 7 déc. 2025) :
 #   gemini-2.5-flash       → 10 RPM, 250 RPD
