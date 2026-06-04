@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { downloadCandidaturesCsv } from "../api.js";
 import { STATUSES } from "../ui.js";
 
@@ -7,6 +7,19 @@ export default function Filters({ filters, onChange }) {
   const toggle = (key, on = "true") => () =>
     onChange({ ...filters, [key]: filters[key] ? "" : on });
   const [exporting, setExporting] = useState(false);
+
+  // Recherche debouncée : le champ réagit instantanément (état local), mais la
+  // requête API n'est déclenchée qu'après 350 ms de pause → fini une requête Turso
+  // par frappe. Les autres filtres (statut, score, toggles) restent immédiats.
+  const [searchInput, setSearchInput] = useState(filters.search);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      onChange((f) => (f.search === searchInput ? f : { ...f, search: searchInput }));
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchInput, onChange]);
+  // Resync si le filtre est réinitialisé depuis l'extérieur.
+  useEffect(() => setSearchInput(filters.search), [filters.search]);
 
   const exportCsv = async () => {
     setExporting(true);
@@ -24,8 +37,8 @@ export default function Filters({ filters, onChange }) {
       <input
         type="text"
         placeholder="Rechercher (titre, entreprise, description)…"
-        value={filters.search}
-        onChange={set("search")}
+        value={searchInput}
+        onChange={(e) => setSearchInput(e.target.value)}
         className="min-w-[260px] flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
       />
       <select

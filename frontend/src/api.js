@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 // En prod (Vercel) VITE_API_BASE="" → URLs relatives (même domaine, pas de CORS).
 // En dev VITE_API_BASE non défini → fallback localhost:8000.
@@ -73,6 +73,9 @@ export function useJobs(filters) {
   return useQuery({
     queryKey: ["jobs", filters],
     queryFn: () => request(`/jobs${buildQuery(filters)}`),
+    // Garde la liste précédente affichée pendant le chargement du nouveau filtre
+    // → pas de flash « Chargement… », transition fluide entre recherches/filtres.
+    placeholderData: keepPreviousData,
   });
 }
 
