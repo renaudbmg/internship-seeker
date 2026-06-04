@@ -30,7 +30,7 @@ def list_jobs(
     search: str | None = None,
     hidden: bool = False,  # False = annonces actives ; True = corbeille (archives)
     unseen: bool = False,  # True = uniquement les offres jamais ouvertes (nouveautés)
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(200, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ):
     stmt = select(Job)
