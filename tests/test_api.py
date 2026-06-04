@@ -100,6 +100,26 @@ def test_tracking_refuse_reponse_invalide(client, db_session):
     assert r.status_code == 422
 
 
+def test_repasser_a_traiter_efface_le_suivi(client, db_session):
+    # postulé + relance programmée
+    _seed(db_session)
+    client.patch("/jobs/j1/status", json={"status": "applied"})
+    client.patch("/jobs/j1/tracking", json={"follow_up_at": "2026-01-01", "response": "pending"})
+    # correction d'erreur : retour à « à traiter » → le suivi doit être effacé
+    body = client.patch("/jobs/j1/status", json={"status": "to_review"}).json()
+    assert body["applied_at"] is None
+    assert body["follow_up_at"] is None
+    assert body["response"] is None
+
+
+def test_rejected_supprime_la_relance(client, db_session):
+    _seed(db_session)
+    client.patch("/jobs/j1/status", json={"status": "applied"})
+    client.patch("/jobs/j1/tracking", json={"follow_up_at": "2026-01-01", "response": "pending"})
+    body = client.patch("/jobs/j1/status", json={"status": "rejected"}).json()
+    assert body["follow_up_at"] is None  # plus de rappel fantôme
+
+
 # ---------- Payload allégé liste vs détail ----------
 
 def test_liste_sans_description(client, db_session):

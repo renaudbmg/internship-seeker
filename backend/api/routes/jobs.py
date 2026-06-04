@@ -132,11 +132,20 @@ def update_status(
     if job is None:
         raise HTTPException(status_code=404, detail="Offre introuvable")
     job.status = payload.status
-    # Premier passage à « postulé » : on date la candidature et on initialise le suivi.
-    if payload.status == "applied" and job.applied_at is None:
-        job.applied_at = datetime.now(UTC)
+    if payload.status == "applied":
+        # Premier passage à « postulé » : on date la candidature et on initialise le suivi.
+        if job.applied_at is None:
+            job.applied_at = datetime.now(UTC)
         if job.response is None:
             job.response = "pending"
+    elif payload.status in ("to_review", "interested"):
+        # Retour à un état pré-candidature (ex. erreur corrigée) : on efface tout le
+        # suivi, sinon un rappel de relance « fantôme » persiste.
+        job.applied_at = None
+        job.follow_up_at = None
+        job.response = None
+    else:  # rejected : offre abandonnée → plus de relance à faire
+        job.follow_up_at = None
     session.commit()
     session.refresh(job)
     return job

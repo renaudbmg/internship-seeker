@@ -139,7 +139,14 @@ export function useUpdateStatus() {
   return makeOptimisticMutation(qc, {
     mutationFn: ({ id, status }) =>
       request(`/jobs/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
-    buildPatch: ({ status }) => ({ status }),
+    // Reflète côté UI le nettoyage du suivi fait par le backend selon le statut cible
+    // (sinon le badge « relance » reste affiché jusqu'au prochain refetch).
+    buildPatch: ({ status }) => {
+      if (status === "to_review" || status === "interested")
+        return { status, applied_at: null, follow_up_at: null, response: null };
+      if (status === "rejected") return { status, follow_up_at: null };
+      return { status };
+    },
     invalidateStats: true,
   });
 }
