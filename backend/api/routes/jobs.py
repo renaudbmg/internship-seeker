@@ -42,8 +42,10 @@ def list_jobs(
         stmt = stmt.where(Job.source == source)
     if status:
         stmt = stmt.where(Job.status == status)
+    # Score effectif = score IA si présent, sinon score heuristique (provisoire).
+    effective_score = func.coalesce(Job.score_ai, Job.score_heuristic)
     if score_min is not None:
-        stmt = stmt.where(Job.score_ai >= score_min)
+        stmt = stmt.where(effective_score >= score_min)
     if search:
         pattern = f"%{search}%"
         stmt = stmt.where(
@@ -55,7 +57,8 @@ def list_jobs(
         )
 
     total = session.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
-    stmt = stmt.order_by(Job.score_ai.is_(None), Job.score_ai.desc(), Job.scraped_at.desc())
+    # Tri par score effectif décroissant (IA prioritaire, heuristique en repli), puis récence.
+    stmt = stmt.order_by(effective_score.is_(None), effective_score.desc(), Job.scraped_at.desc())
     items = session.execute(stmt.limit(limit).offset(offset)).scalars().all()
     return JobListOut(total=total, items=items)
 

@@ -16,6 +16,7 @@ class JobOut(BaseModel):
     description: str
     logo_url: str | None = None
     summary_ai: str | None
+    score_heuristic: int | None = None
     score_ai: int | None
     # Champs normés extraits par Gemini, stockés en JSON sérialisé côté DB,
     # renvoyés ici en objet prêt à afficher.

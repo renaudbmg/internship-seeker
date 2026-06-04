@@ -1,5 +1,6 @@
 from sqlalchemy import or_
 
+from .ai.heuristic import heuristic_score
 from .config import settings
 from .db.database import SessionLocal, init_db
 from .db.models import Job
@@ -54,6 +55,9 @@ def _store(raw_jobs: list[RawJob]) -> list[Job]:
                 location=rj.location,
                 description=rj.description,
                 logo_url=rj.logo_url,
+                # Score heuristique immédiat (gratuit) → liste classée dès l'import,
+                # et priorité de passage Gemini par pertinence.
+                score_heuristic=heuristic_score(rj.title, rj.description),
             )
             session.add(job)
             new.append(job)
@@ -125,6 +129,8 @@ def _backfill_descriptions() -> None:
                 consecutive_429 = 0
                 if desc:
                     job.description = desc
+                    # description réelle → recalcul du score heuristique (meilleur signal)
+                    job.score_heuristic = heuristic_score(job.title, desc)
                     # déjà taguée sans description → re-tag propre sur contenu réel
                     if job.score_ai is not None:
                         job.score_ai = None
@@ -133,6 +139,19 @@ def _backfill_descriptions() -> None:
                     session.commit()
                 time.sleep(1.5)
     print(f"[backfill] {filled} descriptions LinkedIn récupérées")
+
+
+def _backfill_heuristic() -> None:
+    """Calcule le score heuristique des offres qui n'en ont pas encore (gratuit, local).
+    Couvre les offres importées avant l'introduction du scoring à deux étages."""
+    with SessionLocal() as session:
+        jobs = session.query(Job).filter(Job.score_heuristic.is_(None)).all()
+        if not jobs:
+            return
+        for job in jobs:
+            job.score_heuristic = heuristic_score(job.title, job.description)
+        session.commit()
+        print(f"[heuristic] {len(jobs)} offres scorées localement")
 
 
 def _tag_new() -> None:
@@ -219,6 +238,7 @@ def run() -> list[Job]:
     for job in new[:10]:
         print(f"  • [{job.source}] {job.title} — {job.company} ({job.location})")
     _backfill_descriptions()
+    _backfill_heuristic()
     _tag_new()
     _extract_remaining()
     _notify(new_ids)

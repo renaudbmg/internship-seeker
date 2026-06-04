@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+from sqlalchemy import func
+
 from ..config import settings
 from ..db.database import SessionLocal, init_db
 from ..db.models import Job
@@ -70,18 +72,38 @@ class TaggerUnavailable(RuntimeError):
 
 class Tagger:
     def __init__(self):
-        if not settings.gemini_api_key:
+        self._keys = settings.gemini_key_list
+        if not self._keys:
             raise TaggerUnavailable(
                 "GEMINI_API_KEY manquante — tagging désactivé. "
                 "Récupère une clé gratuite sur https://aistudio.google.com/app/apikey"
             )
         import google.generativeai as genai
 
-        genai.configure(api_key=settings.gemini_api_key)
-        self._model = genai.GenerativeModel(
+        self._genai = genai
+        self._key_index = 0
+        self._configure()
+
+    def _configure(self) -> None:
+        self._genai.configure(api_key=self._keys[self._key_index])
+        self._model = self._genai.GenerativeModel(
             settings.gemini_model,
             generation_config={"response_mime_type": "application/json"},
         )
+
+    @property
+    def keys_count(self) -> int:
+        return len(self._keys)
+
+    def rotate_key(self) -> bool:
+        """Passe à la clé suivante (autre compte) quand la courante a épuisé son RPD.
+        Renvoie False s'il n'y a plus de clé disponible."""
+        if self._key_index + 1 >= len(self._keys):
+            return False
+        self._key_index += 1
+        self._configure()
+        print(f"[tagger] bascule sur la clé Gemini #{self._key_index + 1}/{len(self._keys)}")
+        return True
 
     def tag(self, job: Job) -> dict:
         prompt = PROMPT_TEMPLATE.format(
@@ -134,18 +156,25 @@ def tag_pending(limit: int | None = None) -> int:
     init_db()
     tagger = Tagger()
     with SessionLocal() as session:
-        # Les offres les plus récentes d'abord : si le quota ne couvre pas tout le
-        # backlog, ce sont les nouvelles offres du jour qui sont taguées en priorité
-        # (et donc scorées avant la notification Telegram du matin).
+        # Priorité par score heuristique DÉCROISSANT (les offres les plus prometteuses
+        # d'abord), puis par récence. Si le quota Gemini ne couvre pas tout le backlog,
+        # ce sont les meilleures offres qui sont taguées en priorité — pas juste les
+        # plus récentes. (score_heuristic NULL = traité en dernier via COALESCE.)
         query = (
             session.query(Job)
             .filter(Job.score_ai.is_(None), Job.hidden.isnot(True))
-            .order_by(Job.scraped_at.desc())
+            .order_by(
+                func.coalesce(Job.score_heuristic, 0).desc(),
+                Job.scraped_at.desc(),
+            )
         )
         if limit:
             query = query.limit(limit)
         pending = query.all()
-        print(f"[tagger] {len(pending)} offres à tagger (scoring + extraction)")
+        print(
+            f"[tagger] {len(pending)} offres à tagger (scoring + extraction) "
+            f"— {tagger.keys_count} clé(s) Gemini"
+        )
 
         def process(job: Job) -> None:
             result = tagger.tag(job)
@@ -153,9 +182,20 @@ def tag_pending(limit: int | None = None) -> int:
             job.details_ai = json.dumps(result["details"], ensure_ascii=False)
             session.commit()  # commit par offre : un crash en cours de route ne perd rien
 
-        tagged, _ = run_quota_loop(pending, process, label="tagger")
-    print(f"[tagger] {tagged} offres taguées sur {len(pending)} en attente")
-    return tagged
+        # Boucle de quota avec rotation de clés : quand une clé épuise son RPD, on
+        # bascule sur la suivante et on reprend les offres restantes (encore non taguées).
+        total = 0
+        while True:
+            remaining = [j for j in pending if j.score_ai is None]
+            if not remaining:
+                break
+            tagged, daily_exhausted = run_quota_loop(remaining, process, label="tagger")
+            total += tagged
+            if daily_exhausted and tagger.rotate_key():
+                continue
+            break
+    print(f"[tagger] {total} offres taguées sur {len(pending)} en attente")
+    return total
 
 
 if __name__ == "__main__":

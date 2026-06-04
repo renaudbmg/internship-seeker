@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSetHidden, useUpdateNotes, useUpdateStatus, useUpdateTracking } from "../api.js";
-import { RESPONSES, STATUSES, followUpDue, formatDate, scoreColor, toDateInput } from "../ui.js";
+import { RESPONSES, STATUSES, effectiveScore, followUpDue, formatDate, scoreColor, toDateInput } from "../ui.js";
 import CompanyLogo from "./CompanyLogo.jsx";
 
 export default function JobDetail({ job, onClose }) {
@@ -8,6 +8,7 @@ export default function JobDetail({ job, onClose }) {
   const updateStatus = useUpdateStatus();
   const updateNotes = useUpdateNotes();
   const setHidden = useSetHidden();
+  const score = effectiveScore(job);
 
   useEffect(() => setNotes(job.notes || ""), [job.id]);
 
@@ -35,8 +36,8 @@ export default function JobDetail({ job, onClose }) {
       </div>
 
       <div className="flex items-center gap-3">
-        <span className={`rounded-lg px-3 py-1 font-bold ${scoreColor(job.score_ai)}`}>
-          Score {job.score_ai ?? "—"}
+        <span className={`rounded-lg px-3 py-1 font-bold ${scoreColor(score.value)}`}>
+          Score {score.value ?? "—"}{score.provisional ? " ~" : ""}
         </span>
         <a
           href={job.url}

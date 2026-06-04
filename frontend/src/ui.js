@@ -17,6 +17,14 @@ export function scoreColor(score) {
   return "bg-slate-300 text-slate-700";
 }
 
+// Score effectif : IA si disponible, sinon score heuristique provisoire (étage 1).
+// `provisional` = true quand seul l'heuristique est dispo (Gemini pas encore passé).
+export function effectiveScore(job) {
+  if (job?.score_ai != null) return { value: job.score_ai, provisional: false };
+  if (job?.score_heuristic != null) return { value: job.score_heuristic, provisional: true };
+  return { value: null, provisional: false };
+}
+
 export const RESPONSES = [
   { value: "pending", label: "En attente", color: "bg-slate-100 text-slate-600" },
   { value: "positive", label: "Réponse positive", color: "bg-green-100 text-green-700" },

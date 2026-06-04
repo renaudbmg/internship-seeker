@@ -24,6 +24,9 @@ class Job(Base):
     logo_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     summary_ai: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Score heuristique local (étage 1, gratuit) : pertinence provisoire 0-100 calculée
+    # au stockage. Sert de classement par défaut + priorité de passage Gemini.
+    score_heuristic: Mapped[int | None] = mapped_column(Integer, nullable=True)
     score_ai: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Champs normés extraits par Gemini (JSON sérialisé) — voir backend/ai/extractor.py
     details_ai: Mapped[str | None] = mapped_column(Text, nullable=True)

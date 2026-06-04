@@ -1,5 +1,5 @@
 import { useSetHidden } from "../api.js";
-import { followUpDue, scoreColor, statusMeta } from "../ui.js";
+import { effectiveScore, followUpDue, scoreColor, statusMeta } from "../ui.js";
 import CompanyLogo from "./CompanyLogo.jsx";
 
 const filled = (v) => v && v !== "Non précisé";
@@ -13,6 +13,7 @@ function ficheChips(details) {
 export default function JobCard({ job, selected, onSelect }) {
   const meta = statusMeta(job.status);
   const chips = ficheChips(job.details_ai);
+  const score = effectiveScore(job);
   const setHidden = useSetHidden();
 
   const toggleHidden = (e) => {
@@ -37,9 +38,13 @@ export default function JobCard({ job, selected, onSelect }) {
           </div>
         </div>
         <span
-          className={`shrink-0 rounded-lg px-2 py-1 text-sm font-bold ${scoreColor(job.score_ai)}`}
+          className={`shrink-0 rounded-lg px-2 py-1 text-sm font-bold ${scoreColor(score.value)} ${
+            score.provisional ? "opacity-60" : ""
+          }`}
+          title={score.provisional ? "Score provisoire (heuristique) — affiné par l'IA bientôt" : "Score IA"}
         >
-          {job.score_ai ?? "—"}
+          {score.value ?? "—"}
+          {score.provisional && <span className="ml-0.5 text-[10px] font-normal">~</span>}
         </span>
       </div>
       {chips.length > 0 && (

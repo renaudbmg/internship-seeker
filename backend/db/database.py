@@ -49,6 +49,7 @@ _ADDITIVE_COLUMNS: dict[str, str] = {
     "follow_up_at": "DATETIME",
     "response": "VARCHAR",
     "hidden": "BOOLEAN DEFAULT 0",  # DEFAULT 0 : les lignes existantes deviennent non masquées
+    "score_heuristic": "INTEGER",
 }
 
 

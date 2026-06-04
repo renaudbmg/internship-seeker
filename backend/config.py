@@ -77,6 +77,10 @@ class Settings(BaseSettings):
     # Scoring IA + extraction — Gemini Flash (1 appel combiné par offre via tagger.py)
     scoring_enabled: bool = True
     gemini_api_key: str | None = None  # https://aistudio.google.com/app/apikey
+    # Clés supplémentaires (autres comptes Google) séparées par des virgules. Le tagger
+    # bascule automatiquement sur la suivante quand une clé épuise son quota JOURNALIER
+    # → multiplie le nombre d'offres taguées par jour (20 RPD × nb de clés).
+    gemini_api_keys: str | None = None
     # Limites réelles vérifiées sur aistudio.google.com/rate-limit (free tier) :
     #   gemini-2.5-flash : 5 RPM, 250K TPM, 20 RPD
     # gemini-2.5-flash-lite n'est pas disponible sur ce compte.
@@ -134,6 +138,17 @@ class Settings(BaseSettings):
     @property
     def title_block_list(self) -> list[str]:
         return [t.strip() for t in self.title_block.split(",") if t.strip()]
+
+    @property
+    def gemini_key_list(self) -> list[str]:
+        """Clé principale + clés supplémentaires, dédupliquées, dans l'ordre."""
+        keys: list[str] = []
+        if self.gemini_api_key:
+            keys.append(self.gemini_api_key.strip())
+        if self.gemini_api_keys:
+            keys.extend(k.strip() for k in self.gemini_api_keys.split(",") if k.strip())
+        seen: set[str] = set()
+        return [k for k in keys if k and not (k in seen or seen.add(k))]
 
 
 settings = Settings()
