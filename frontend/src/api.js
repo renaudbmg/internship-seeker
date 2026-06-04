@@ -4,13 +4,42 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 // En dev VITE_API_BASE non défini → fallback localhost:8000.
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 
+const TOKEN_KEY = "is_auth_token";
+export const getToken = () => localStorage.getItem(TOKEN_KEY) || "";
+export const setToken = (t) => localStorage.setItem(TOKEN_KEY, t);
+export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+
 async function request(path, options = {}) {
+  const token = getToken();
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     ...options,
   });
+  if (res.status === 401) {
+    // Token invalide/expiré → on purge et on renvoie à l'écran de login.
+    clearToken();
+    window.location.reload();
+    throw new Error("401 Non autorisé");
+  }
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return res.json();
+}
+
+// Probe d'authentification : true si l'accès est autorisé (auth désactivée OU token
+// valide), false si un mot de passe est requis et manquant/invalide.
+export async function probeAuth() {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_BASE}/auth/check`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 function buildQuery(filters) {

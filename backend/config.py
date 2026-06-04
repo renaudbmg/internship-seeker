@@ -116,6 +116,10 @@ class Settings(BaseSettings):
     turso_database_url: str | None = None  # ex: libsql://ma-base-org.turso.io
     turso_auth_token: str | None = None  # `turso db tokens create ma-base`
 
+    # Authentification API (app mono-utilisateur). Si défini, toutes les routes /jobs
+    # exigent ce mot de passe (header Bearer / X-API-Key). Vide = auth désactivée (dev).
+    app_password: str | None = None
+
     # HTTP
     request_timeout: float = 20.0
     user_agent: str = (

@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from ..db.database import init_db
+from .auth import require_auth
 from .routes import jobs, stats
 
 app = FastAPI(title="Internship Seeker API", version="0.1.0")
@@ -25,6 +26,13 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+@app.get("/auth/check")
+def auth_check(_: None = Depends(require_auth)) -> dict:
+    """Valide le mot de passe (utilisé par l'écran de login du frontend)."""
+    return {"ok": True}
+
+
 # stats avant jobs : /jobs/stats doit matcher avant /jobs/{job_id}
-app.include_router(stats.router)
-app.include_router(jobs.router)
+# require_auth protège toutes les routes /jobs (lecture ET écriture).
+app.include_router(stats.router, dependencies=[Depends(require_auth)])
+app.include_router(jobs.router, dependencies=[Depends(require_auth)])
