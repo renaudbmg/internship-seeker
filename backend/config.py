@@ -61,19 +61,16 @@ class Settings(BaseSettings):
     themuse_enabled: bool = False
     themuse_api_key: str | None = None
 
-    # Source: ATS SmartRecruiters (API publique, sans clé). Marques sport (ex. Salomon, Asics).
-    # `smartrecruiters_companies` = identifiants séparés par des virgules.
-    smartrecruiters_enabled: bool = True
+    # Source: ATS SmartRecruiters — désactivé (focus LinkedIn d'abord)
+    smartrecruiters_enabled: bool = False
     smartrecruiters_companies: str = "Salomon,Asics"
 
-    # Source: ATS Greenhouse (API publique « job board », sans clé). Ex. On Running.
-    # `greenhouse_boards` = identifiants de board séparés par des virgules.
-    greenhouse_enabled: bool = True
+    # Source: ATS Greenhouse — désactivé (focus LinkedIn d'abord)
+    greenhouse_enabled: bool = False
     greenhouse_boards: str = "onrunning"
 
-    # Source: ATS Workday (API CXS publique). Triplets `tenant:datacenter:site` séparés
-    # par des virgules. Ex. Deckers (HOKA/UGG). New Balance dispo : "newbalance:wd1:careers".
-    workday_enabled: bool = True
+    # Source: ATS Workday — désactivé (focus LinkedIn d'abord)
+    workday_enabled: bool = False
     workday_sites: str = "deckers:wd5:deckers"
     workday_max_descriptions: int = 30
 
@@ -92,12 +89,11 @@ class Settings(BaseSettings):
     # ~265 offres en attente → ~13 jours pour tout tagger au rythme actuel.
     gemini_daily_quota: int = 20
 
-    # Source: Welcome to the Jungle (via Algolia public, extrait depuis leur page)
-    wttj_enabled: bool = True
+    # Source: Welcome to the Jungle — désactivé (sera branché après LinkedIn)
+    wttj_enabled: bool = False
     wttj_max_per_keyword: int = 50
 
-    # Source: JobTeaser (scraping HTML) — désactivé : leur site renvoie 404/403 aux scrapers.
-    # Leur URL /fr/offres-d-emploi n'existe plus et /fr/job-offers bloque les bots.
+    # Source: JobTeaser — désactivé (leur site bloque les scrapers)
     jobteaser_enabled: bool = False
     jobteaser_max_per_keyword: int = 50
 
