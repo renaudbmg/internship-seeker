@@ -58,3 +58,11 @@ export function followUpDue(job) {
   if (job.response && job.response !== "pending") return false;
   return new Date(job.follow_up_at) <= new Date();
 }
+
+// État de la relance pour l'affichage : null (aucune / réponse reçue),
+// "scheduled" (programmée dans le futur), "due" (échue, à faire maintenant).
+export function followUpStatus(job) {
+  if (!job?.follow_up_at) return null;
+  if (job.response && job.response !== "pending") return null;
+  return new Date(job.follow_up_at) <= new Date() ? "due" : "scheduled";
+}

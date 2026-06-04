@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useJob, useSetHidden, useUpdateNotes, useUpdateStatus, useUpdateTracking } from "../api.js";
-import { RESPONSES, STATUSES, effectiveScore, followUpDue, formatDate, scoreColor, toDateInput } from "../ui.js";
+import { RESPONSES, STATUSES, effectiveScore, followUpStatus, formatDate, scoreColor, toDateInput } from "../ui.js";
 import CompanyLogo from "./CompanyLogo.jsx";
 
 export default function JobDetail({ job, onClose }) {
@@ -106,7 +106,7 @@ export default function JobDetail({ job, onClose }) {
 
 function JobTracking({ job }) {
   const updateTracking = useUpdateTracking();
-  const due = followUpDue(job);
+  const fu = followUpStatus(job);
 
   const setFollowUp = (value) =>
     updateTracking.mutate({
@@ -139,8 +139,13 @@ function JobTracking({ job }) {
         onChange={(e) => setFollowUp(e.target.value)}
         className="mb-1 w-full rounded-lg border border-slate-300 p-1.5 text-sm"
       />
-      {due && (
+      {fu === "due" && (
         <p className="mb-3 font-medium text-amber-700">⏰ Relance à faire</p>
+      )}
+      {fu === "scheduled" && (
+        <p className="mb-3 font-medium text-blue-700">
+          📅 Relance prévue le {formatDate(job.follow_up_at)}
+        </p>
       )}
 
       <p className="mb-1 mt-3 text-xs uppercase tracking-wide text-slate-400">Réponse</p>

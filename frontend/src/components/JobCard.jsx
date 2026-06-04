@@ -1,5 +1,5 @@
 import { useSetHidden } from "../api.js";
-import { effectiveScore, followUpDue, scoreColor, statusMeta } from "../ui.js";
+import { effectiveScore, followUpStatus, formatDate, scoreColor, statusMeta } from "../ui.js";
 import CompanyLogo from "./CompanyLogo.jsx";
 
 const filled = (v) => v && v !== "Non précisé";
@@ -14,6 +14,7 @@ export default function JobCard({ job, selected, onSelect }) {
   const meta = statusMeta(job.status);
   const chips = ficheChips(job.details_ai);
   const score = effectiveScore(job);
+  const fu = followUpStatus(job);
   const setHidden = useSetHidden();
 
   const toggleHidden = (e) => {
@@ -69,9 +70,14 @@ export default function JobCard({ job, selected, onSelect }) {
             nouveau
           </span>
         )}
-        {followUpDue(job) && (
+        {fu === "due" && (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
             ⏰ relance
+          </span>
+        )}
+        {fu === "scheduled" && (
+          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+            📅 relance {formatDate(job.follow_up_at)}
           </span>
         )}
         <span
