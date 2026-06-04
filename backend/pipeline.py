@@ -27,12 +27,13 @@ def _store(raw_jobs: list[RawJob]) -> list[Job]:
     """
     exclude = settings.title_exclude_list
     keep = settings.title_keep_list
+    block = settings.title_block_list
     new: list[Job] = []
     excluded = 0
     with SessionLocal() as session:
         seen_ids: set[str] = set()
         for rj in raw_jobs:
-            if should_exclude_title(rj.title, exclude, keep):
+            if should_exclude_title(rj.title, exclude, keep, block):
                 excluded += 1
                 continue
             jid = rj.job_id()

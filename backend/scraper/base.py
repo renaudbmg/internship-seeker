@@ -81,15 +81,24 @@ def title_matches_any(title: str | None, terms: list[str]) -> bool:
 
 
 def should_exclude_title(
-    title: str | None, exclude: list[str], keep: list[str]
+    title: str | None,
+    exclude: list[str],
+    keep: list[str],
+    block: list[str] | None = None,
 ) -> bool:
     """True si le titre doit être écarté.
 
-    Un signal positif (stage, alternance, PFE…) l'emporte : une offre dont le titre
-    porte un de ces termes est conservée même si elle contient un terme d'exclusion
-    (ex. « Stage Responsable événementiel » → gardée). Sinon, on écarte dès qu'un
-    terme d'exclusion senior est présent (ex. « Responsable événementiel » → écartée).
+    Trois niveaux :
+    1. BLOCK (dure) : si le titre contient un terme bloqué, toujours écarté — même si
+       "stage" / "alternance" est présent. (Ex : « Stage vendeur Decathlon » → écarté.)
+    2. KEEP (signal positif) : si le titre contient un signal stage/alternance/PFE, il
+       est conservé même face à un terme d'exclusion senior.
+       (Ex : « Stage Responsable événementiel » → gardée.)
+    3. EXCLUDE (soft) : écarté si un terme senior est présent et aucun keep ne le sauve.
+       (Ex : « Responsable événementiel » → écarté.)
     """
+    if block and title_matches_any(title, block):
+        return True
     if title_matches_any(title, keep):
         return False
     return title_matches_any(title, exclude)

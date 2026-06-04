@@ -32,13 +32,29 @@ class Settings(BaseSettings):
     # être « Stage Responsable… »). Ils sont gérés par le signal positif ci-dessous.
     title_exclude: str = (
         "senior,confirmé,confirmée,expérimenté,expérimentée,lead,"
-        "directeur,directrice,head of,principal,chef de,expert,architecte,cdi,vie,v.i.e"
+        "directeur,directrice,head of,principal,chef de,expert,architecte,cdi,vie,v.i.e,"
+        "commercial,commerciale,chargé de clientèle,conseiller de vente,conseillère de vente"
     )
     # Signaux positifs : si le titre contient un de ces termes, l'offre est CONSERVÉE
     # même si elle matche un terme d'exclusion (« Stage Responsable événementiel » → gardée).
     title_keep: str = (
         "stage,stagiaire,intern,internship,alternance,alternant,alternante,"
         "apprenti,apprentie,apprentissage,pfe,fin d'études,fin d'etudes"
+    )
+    # BLOCKLIST DURE : toujours exclure, même si "stage" / "alternance" est présent.
+    # Pour les métiers clairement hors-cible ingénieur data, quel que soit le niveau.
+    # Ex : « Stage vendeur Decathlon » ou « Alternance éducateur sportif » → refusé.
+    title_block: str = (
+        # Vente / commerce terrain
+        "vendeur,vendeuse,caissier,caissière,manutentionnaire,magasinier,magasinière,"
+        "préparateur de commandes,livreur,livreuse,coursier,coursière,"
+        # Accueil / hébergement
+        "hôtesse,hotesse,réceptionniste,agent d'accueil,"
+        # Sport / animation non-data
+        "coach,éducateur,éducatrice,animateur,animatrice,moniteur,monitrice,"
+        # Restauration / sécurité
+        "serveur,serveuse,cuisinier,cuisinière,barista,plongeur,"
+        "agent de sécurité,vigile"
     )
 
     # Source: The Muse (gratuite, sans clé) — socle de secours, désactivé par défaut
@@ -118,6 +134,10 @@ class Settings(BaseSettings):
     @property
     def title_keep_list(self) -> list[str]:
         return [t.strip() for t in self.title_keep.split(",") if t.strip()]
+
+    @property
+    def title_block_list(self) -> list[str]:
+        return [t.strip() for t in self.title_block.split(",") if t.strip()]
 
 
 settings = Settings()
