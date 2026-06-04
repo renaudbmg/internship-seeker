@@ -100,6 +100,32 @@ def test_tracking_refuse_reponse_invalide(client, db_session):
     assert r.status_code == 422
 
 
+# ---------- Payload allégé liste vs détail ----------
+
+def test_liste_sans_description(client, db_session):
+    _seed(db_session, description="Longue description confidentielle")
+    item = client.get("/jobs").json()["items"][0]
+    assert "description" not in item  # liste allégée
+
+
+def test_detail_avec_description_et_marque_vu(client, db_session):
+    _seed(db_session, description="Missions data SQL", seen=False)
+    detail = client.get("/jobs/j1").json()
+    assert detail["description"] == "Missions data SQL"
+    # l'ouverture du détail marque l'offre comme vue
+    assert client.get("/jobs/j1").json()["seen"] is True
+
+
+# ---------- Seuil heuristique (économie quota) ----------
+
+def test_progress_exclut_sous_seuil(client, db_session):
+    _seed(db_session, id="bonne", score_heuristic=90, score_ai=None)
+    _seed(db_session, id="faible", score_heuristic=10, score_ai=None)  # sous le seuil 25
+    prog = client.get("/jobs/progress").json()
+    # seule l'offre au-dessus du seuil compte comme « à tagger »
+    assert prog["pending_scoring"] == 1
+
+
 # ---------- Nouveautés (non vues) ----------
 
 def test_filtre_unseen(client, db_session):

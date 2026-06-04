@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from ..config import settings
 from ..db.database import SessionLocal, init_db
@@ -168,6 +168,13 @@ def tag_pending(limit: int | None = None) -> int:
                 Job.scraped_at.desc(),
             )
         )
+        # Seuil heuristique : on ne gaspille pas Gemini sur les offres peu prometteuses.
+        # On garde celles sans score heuristique (NULL) par sécurité.
+        floor = settings.gemini_min_heuristic
+        if floor > 0:
+            query = query.filter(
+                or_(Job.score_heuristic.is_(None), Job.score_heuristic >= floor)
+            )
         if limit:
             query = query.limit(limit)
         pending = query.all()

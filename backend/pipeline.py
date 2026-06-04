@@ -232,7 +232,7 @@ def _notify_follow_ups() -> None:
         print(f"[telegram] ERREUR relances: {exc!r}")
 
 
-def run() -> list[Job]:
+def _run() -> list[Job]:
     init_db()
     raw = _collect()
     new = _store(raw)
@@ -247,3 +247,19 @@ def run() -> list[Job]:
     _notify(new_ids)
     _notify_follow_ups()
     return new
+
+
+def run() -> list[Job]:
+    """Orchestration complète. Sur crash inattendu, alerte Telegram puis relève
+    l'erreur (pour que le job GitHub Actions échoue visiblement aussi)."""
+    try:
+        return _run()
+    except Exception as exc:
+        print(f"[pipeline] ÉCHEC: {exc!r}")
+        try:
+            from .notifications.telegram import notify_error
+
+            notify_error("pipeline.run", exc)
+        except Exception:
+            pass
+        raise

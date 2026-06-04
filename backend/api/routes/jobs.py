@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 
 from ...db.models import Job
 from ..deps import get_session
@@ -62,6 +62,9 @@ def list_jobs(
     total = session.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
     # Tri par score effectif décroissant (IA prioritaire, heuristique en repli), puis récence.
     stmt = stmt.order_by(effective_score.is_(None), effective_score.desc(), Job.scraped_at.desc())
+    # defer(description) : on ne charge PAS la description depuis Turso pour la liste
+    # (la recherche par mot-clé ci-dessus la filtre via WHERE, sans la rapatrier).
+    stmt = stmt.options(defer(Job.description))
     items = session.execute(stmt.limit(limit).offset(offset)).scalars().all()
     return JobListOut(total=total, items=items)
 

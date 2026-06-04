@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSetHidden, useUpdateNotes, useUpdateStatus, useUpdateTracking } from "../api.js";
+import { useJob, useSetHidden, useUpdateNotes, useUpdateStatus, useUpdateTracking } from "../api.js";
 import { RESPONSES, STATUSES, effectiveScore, followUpDue, formatDate, scoreColor, toDateInput } from "../ui.js";
 import CompanyLogo from "./CompanyLogo.jsx";
 
@@ -9,6 +9,8 @@ export default function JobDetail({ job, onClose }) {
   const updateNotes = useUpdateNotes();
   const setHidden = useSetHidden();
   const score = effectiveScore(job);
+  // La liste ne contient plus la description (payload allégé) : on la récupère ici.
+  const { data: full, isLoading: descLoading } = useJob(job.id);
 
   useEffect(() => setNotes(job.notes || ""), [job.id]);
 
@@ -95,7 +97,7 @@ export default function JobDetail({ job, onClose }) {
       <div>
         <p className="mb-1 text-sm font-semibold text-slate-700">Description</p>
         <p className="whitespace-pre-wrap text-sm text-slate-600">
-          {job.description || "Pas de description récupérée."}
+          {descLoading ? "Chargement…" : full?.description || "Pas de description récupérée."}
         </p>
       </div>
     </aside>

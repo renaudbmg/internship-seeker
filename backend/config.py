@@ -112,6 +112,10 @@ class Settings(BaseSettings):
     # RPD réel = 20. Avec le tagger combiné (1 appel/offre), on tague 20 offres/jour max.
     # ~265 offres en attente → ~13 jours pour tout tagger au rythme actuel.
     gemini_daily_quota: int = 20
+    # Seuil heuristique sous lequel on N'APPELLE PAS Gemini : ces offres gardent leur
+    # score heuristique (affiché « ~ ») mais ne consomment pas de quota. Concentre les
+    # ~20-60 appels/jour sur les offres prometteuses. 0 = tagger tout (désactive le seuil).
+    gemini_min_heuristic: int = 25
 
     # Source: Welcome to the Jungle — désactivé (sera branché après LinkedIn)
     wttj_enabled: bool = False

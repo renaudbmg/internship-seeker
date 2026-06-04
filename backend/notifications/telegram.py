@@ -144,3 +144,20 @@ def notify_follow_ups(jobs: list[Job]) -> None:
     if not jobs:
         return
     _send(_format_follow_ups(jobs))
+
+
+def notify_error(context: str, exc: BaseException) -> None:
+    """Alerte Telegram quand le pipeline plante (cron silencieux sinon).
+    Best-effort : n'échoue jamais (on est déjà dans un chemin d'erreur)."""
+    try:
+        import html
+
+        msg = (
+            "⚠️ <b>Pipeline en échec</b>\n"
+            f"<b>Étape :</b> {html.escape(context)}\n"
+            f"<b>Erreur :</b> {html.escape(type(exc).__name__)}: "
+            f"{html.escape(str(exc)[:300])}"
+        )
+        _send(msg)
+    except Exception:
+        pass  # ne jamais masquer l'erreur d'origine

@@ -4,7 +4,11 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, field_validator
 
 
-class JobOut(BaseModel):
+class JobListItem(BaseModel):
+    """Offre allégée pour la LISTE : sans `description` (jusqu'à 4000 car/offre).
+    La carte ne l'affiche pas → on évite ~800 Ko de payload inutile sur 200 offres.
+    Le détail (`JobOut`) la fournit, récupérée à l'ouverture de l'offre."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -13,12 +17,11 @@ class JobOut(BaseModel):
     source: str
     url: str
     location: str
-    description: str
     logo_url: str | None = None
     score_heuristic: int | None = None
     score_ai: int | None
     # Champs normés extraits par Gemini, stockés en JSON sérialisé côté DB,
-    # renvoyés ici en objet prêt à afficher.
+    # renvoyés ici en objet prêt à afficher (gardés : servent aux puces de la carte).
     details_ai: dict | None = None
     status: str
     notes: str | None
@@ -40,9 +43,15 @@ class JobOut(BaseModel):
         return value
 
 
+class JobOut(JobListItem):
+    """Détail complet d'une offre (liste + description)."""
+
+    description: str
+
+
 class JobListOut(BaseModel):
     total: int
-    items: list[JobOut]
+    items: list[JobListItem]
 
 
 class StatusUpdate(BaseModel):

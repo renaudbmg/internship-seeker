@@ -76,6 +76,22 @@ export function useJobs(filters) {
   });
 }
 
+// Détail complet d'une offre (avec description). Appelé à l'ouverture du panneau.
+// Le serveur marque l'offre comme vue (seen=true) ; on reflète ça dans la liste
+// pour faire disparaître le badge « nouveau » et mettre à jour le filtre Nouveautés.
+export function useJob(id) {
+  const qc = useQueryClient();
+  return useQuery({
+    queryKey: ["job", id],
+    enabled: !!id,
+    queryFn: async () => {
+      const job = await request(`/jobs/${id}`);
+      patchJobInCache(qc, id, { seen: true });
+      return job;
+    },
+  });
+}
+
 export function useStats() {
   return useQuery({ queryKey: ["stats"], queryFn: () => request("/jobs/stats") });
 }

@@ -78,8 +78,21 @@ def progress(session: Session = Depends(get_session)):
         select(func.count(Job.id)).where(active, Job.details_ai.isnot(None))
     ).scalar_one()
 
-    pending_scoring = total - scored
-    pending_extraction = total - extracted
+    # « En attente » ne compte que les offres réellement TAGGABLES : au-dessus du seuil
+    # heuristique (ou sans score heuristique). Les offres sous le seuil ne consommeront
+    # jamais de quota → les exclure rend pending/estimation réalistes (sinon jamais à 0).
+    floor = settings.gemini_min_heuristic
+    taggable = active
+    if floor > 0:
+        taggable = active & (
+            (Job.score_heuristic.is_(None)) | (Job.score_heuristic >= floor)
+        )
+    pending_scoring = session.execute(
+        select(func.count(Job.id)).where(taggable, Job.score_ai.is_(None))
+    ).scalar_one()
+    pending_extraction = session.execute(
+        select(func.count(Job.id)).where(taggable, Job.details_ai.is_(None))
+    ).scalar_one()
 
     # Avec le tagger combiné, chaque offre non taguée nécessite 1 seul appel Gemini
     # (scoring + extraction simultanés). Les offres déjà scorées sans extraction
