@@ -78,6 +78,7 @@ def _backfill_descriptions() -> None:
     """
     if not settings.linkedin_description_backfill:
         return
+    import random
     import time
 
     import httpx
@@ -137,7 +138,7 @@ def _backfill_descriptions() -> None:
                         job.details_ai = None
                     filled += 1
                     session.commit()
-                time.sleep(1.5)
+                time.sleep(random.uniform(1.2, 2.2))  # jitter anti-429
     print(f"[backfill] {filled} descriptions LinkedIn récupérées")
 
 

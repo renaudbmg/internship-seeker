@@ -1,3 +1,4 @@
+import random
 import re
 import time
 
@@ -8,6 +9,15 @@ from ..base import BaseScraper, RawJob, should_exclude_title
 
 # Endpoint « guest » de la description d'une offre (page jobPosting).
 DESC_URL = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
+
+# Pool de User-Agents récents (desktop) — on en pioche un au hasard par client HTTP
+# pour paraître moins robotique et limiter le rate-limiting 429.
+_USER_AGENTS = [
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+]
 # Sélecteurs du corps de la description, du plus précis au plus large (résilience).
 _DESC_SELECTORS = (
     "div.show-more-less-html__markup",
@@ -20,9 +30,14 @@ _JOBID_RE = re.compile(r"(\d{7,})")
 
 def linkedin_headers(settings) -> dict[str, str]:
     return {
-        "User-Agent": settings.user_agent,
-        "Accept": "text/html,application/xhtml+xml",
+        "User-Agent": random.choice(_USER_AGENTS),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+        "Referer": "https://www.linkedin.com/jobs/search/",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
+        "X-Requested-With": "XMLHttpRequest",
     }
 
 
@@ -67,11 +82,7 @@ class LinkedInScraper(BaseScraper):
 
     @property
     def headers(self) -> dict[str, str]:
-        return {
-            "User-Agent": self.settings.user_agent,
-            "Accept": "text/html,application/xhtml+xml",
-            "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
-        }
+        return linkedin_headers(self.settings)
 
     def fetch(self) -> list[RawJob]:
         jobs: dict[str, RawJob] = {}
@@ -98,22 +109,41 @@ class LinkedInScraper(BaseScraper):
             }
             if self.settings.linkedin_experience_level:
                 params["f_E"] = self.settings.linkedin_experience_level
-            try:
-                resp = client.get(self.SEARCH_URL, params=params)
-                if resp.status_code == 429:
-                    print(f"[linkedin] 429 rate-limit sur « {keyword} », on arrête la pagination")
-                    return
-                resp.raise_for_status()
-            except httpx.HTTPError as exc:
-                print(f"[linkedin] échec recherche « {keyword} » start={start}: {exc!r}")
-                return
+
+            resp = self._get_with_retry(client, params, keyword, start)
+            if resp is None:
+                return  # échec définitif (429 persistant ou erreur HTTP) → on arrête ce keyword
 
             cards = self._parse_cards(resp.text)
             if not cards:
                 return
             for card in cards:
                 jobs.setdefault(card.source_id, card)
-            time.sleep(0.4)
+            time.sleep(random.uniform(0.8, 1.6))  # pacing jitter anti-429
+
+    def _get_with_retry(self, client, params, keyword, start, max_retries=2):
+        """GET la page de recherche avec back-off sur 429 (au lieu d'abandonner direct).
+        Renvoie la réponse, ou None si échec définitif."""
+        for attempt in range(max_retries + 1):
+            try:
+                resp = client.get(self.SEARCH_URL, params=params)
+                if resp.status_code == 429:
+                    if attempt < max_retries:
+                        wait = random.uniform(20, 35) * (attempt + 1)
+                        print(
+                            f"[linkedin] 429 sur « {keyword} » start={start} "
+                            f"(tentative {attempt + 1}/{max_retries}) — pause {wait:.0f}s"
+                        )
+                        time.sleep(wait)
+                        continue
+                    print(f"[linkedin] 429 persistant sur « {keyword} », on arrête la pagination")
+                    return None
+                resp.raise_for_status()
+                return resp
+            except httpx.HTTPError as exc:
+                print(f"[linkedin] échec recherche « {keyword} » start={start}: {exc!r}")
+                return None
+        return None
 
     def _parse_cards(self, html: str) -> list[RawJob]:
         soup = BeautifulSoup(html, "html.parser")
