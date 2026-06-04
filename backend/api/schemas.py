@@ -80,3 +80,7 @@ class ProgressOut(BaseModel):
     remaining_calls: int  # appels Gemini restants (1 appel par offre avec le tagger combiné)
     daily_quota: int  # quota Gemini estimé par jour
     estimated_days: int  # jours estimés avant tagging complet
+    # Backfill descriptions LinkedIn
+    linkedin_total: int = 0       # total offres LinkedIn actives (non masquées)
+    linkedin_with_desc: int = 0   # dont celles avec une description récupérée
+    linkedin_no_desc: int = 0     # en attente de backfill

@@ -86,6 +86,21 @@ def progress(session: Session = Depends(get_session)):
     daily_quota = max(settings.gemini_daily_quota, 1)
     estimated_days = math.ceil(remaining_calls / daily_quota) if remaining_calls else 0
 
+    # Backfill descriptions LinkedIn (hors offres masquées)
+    active = Job.hidden.isnot(True)
+    linkedin_total = session.execute(
+        select(func.count(Job.id)).where(active, Job.source == "linkedin")
+    ).scalar_one()
+    linkedin_with_desc = session.execute(
+        select(func.count(Job.id)).where(
+            active,
+            Job.source == "linkedin",
+            Job.description.isnot(None),
+            Job.description != "",
+        )
+    ).scalar_one()
+    linkedin_no_desc = linkedin_total - linkedin_with_desc
+
     return ProgressOut(
         total=total,
         scored=scored,
@@ -95,4 +110,7 @@ def progress(session: Session = Depends(get_session)):
         remaining_calls=remaining_calls,
         daily_quota=daily_quota,
         estimated_days=estimated_days,
+        linkedin_total=linkedin_total,
+        linkedin_with_desc=linkedin_with_desc,
+        linkedin_no_desc=linkedin_no_desc,
     )

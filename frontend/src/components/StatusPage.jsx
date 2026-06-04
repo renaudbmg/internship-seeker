@@ -32,59 +32,103 @@ export default function StatusPage() {
     return <p className="p-6 text-red-600">Erreur de connexion à l'API.</p>;
 
   const fullyTagged = Math.min(data.scored, data.extracted);
+  const linkedinDesc = data.linkedin_with_desc ?? 0;
+  const linkedinTotal = data.linkedin_total ?? 0;
+  const linkedinNoDesc = data.linkedin_no_desc ?? 0;
 
   return (
-    <div className="mx-auto max-w-4xl p-6">
-      <h2 className="text-lg font-bold text-slate-900">État des lieux du tagging IA</h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Chaque offre passe par Gemini pour un score puis pour l'extraction des champs normés.
-        Le quota free tier limite le débit : le reste est traité automatiquement chaque jour.
-      </p>
+    <div className="mx-auto max-w-4xl p-6 space-y-6">
 
-      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <ProgressCard
-          label="Offres scorées"
-          done={data.scored}
-          total={data.total}
-          color="bg-emerald-500"
-        />
-        <ProgressCard
-          label="Offres catégorisées"
-          done={data.extracted}
-          total={data.total}
-          color="bg-indigo-500"
-        />
-        <ProgressCard
-          label="Entièrement taguées"
-          done={fullyTagged}
-          total={data.total}
-          color="bg-violet-500"
-        />
+      {/* ── Tagging IA ── */}
+      <div>
+        <h2 className="text-lg font-bold text-slate-900">Tagging IA</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Chaque offre passe par Gemini (score + extraction des champs). Le quota free tier
+          limite le débit — le cron rattrape le retard automatiquement.
+        </p>
+
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <ProgressCard label="Offres scorées"       done={data.scored}    total={data.total} color="bg-emerald-500" />
+          <ProgressCard label="Offres catégorisées"  done={data.extracted} total={data.total} color="bg-indigo-500" />
+          <ProgressCard label="Entièrement taguées"  done={fullyTagged}    total={data.total} color="bg-violet-500" />
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Stat label="Total offres"             value={data.total} />
+          <Stat label="En file (score)"          value={data.pending_scoring} />
+          <Stat label="En file (catégorisation)" value={data.pending_extraction} />
+          <Stat label="Appels Gemini restants"   value={data.remaining_calls} />
+        </div>
+
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-5">
+          <p className="text-sm font-medium text-amber-700">Estimation avant tagging complet</p>
+          {data.estimated_days === 0 ? (
+            <p className="mt-1 text-2xl font-bold text-emerald-700">✓ Tout est tagué !</p>
+          ) : (
+            <>
+              <p className="mt-1 text-3xl font-bold text-slate-900">
+                ≈ {data.estimated_days} jour{data.estimated_days > 1 ? "s" : ""}
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                {data.remaining_calls} appels restants à ~{data.daily_quota}/jour (quota Gemini).
+              </p>
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Stat label="Total offres" value={data.total} />
-        <Stat label="En file (score)" value={data.pending_scoring} />
-        <Stat label="En file (catégorisation)" value={data.pending_extraction} />
-        <Stat label="Appels Gemini restants" value={data.remaining_calls} />
-      </div>
+      {/* ── Descriptions LinkedIn ── */}
+      <div>
+        <h2 className="text-lg font-bold text-slate-900">Descriptions LinkedIn</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Le backfill récupère les descriptions manquantes à chaque run (les plus récentes en
+          priorité). Sans description, la Fiche IA est inventée à partir du titre uniquement.
+        </p>
 
-      <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-5">
-        <p className="text-sm font-medium text-amber-700">Estimation avant tagging complet</p>
-        {data.estimated_days === 0 ? (
-          <p className="mt-1 text-2xl font-bold text-emerald-700">✓ Tout est tagué !</p>
+        {linkedinTotal === 0 ? (
+          <p className="mt-4 text-sm text-slate-400">Aucune offre LinkedIn en base.</p>
         ) : (
           <>
-            <p className="mt-1 text-3xl font-bold text-slate-900">
-              ≈ {data.estimated_days} jour{data.estimated_days > 1 ? "s" : ""}
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              {data.remaining_calls} appels restants à ~{data.daily_quota}/jour (quota Gemini).
-              Le cron quotidien rattrape le retard automatiquement.
-            </p>
+            <div className="mt-4">
+              <ProgressCard
+                label="Offres LinkedIn avec description"
+                done={linkedinDesc}
+                total={linkedinTotal}
+                color="bg-sky-500"
+              />
+            </div>
+
+            <div className="mt-4 grid grid-cols-3 gap-4">
+              <Stat label="Total LinkedIn"       value={linkedinTotal} />
+              <Stat label="Avec description"     value={linkedinDesc} />
+              <Stat label="Sans description"     value={linkedinNoDesc} />
+            </div>
+
+            <div className={`mt-4 rounded-xl border p-5 ${
+              linkedinNoDesc === 0
+                ? "border-emerald-200 bg-emerald-50"
+                : "border-sky-200 bg-sky-50"
+            }`}>
+              {linkedinNoDesc === 0 ? (
+                <p className="text-sm font-medium text-emerald-700">
+                  ✓ Toutes les offres LinkedIn ont leur description — les Fiches IA sont fiables.
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm font-medium text-sky-700">
+                    {linkedinNoDesc} offre{linkedinNoDesc > 1 ? "s" : ""} en attente de backfill
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Le cron récupère automatiquement les descriptions manquantes à chaque passage.
+                    Les Fiches IA de ces offres seront régénérées une fois la description disponible.
+                  </p>
+                </>
+              )}
+            </div>
           </>
         )}
       </div>
+
     </div>
   );
 }
