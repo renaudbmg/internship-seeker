@@ -67,12 +67,15 @@ def stats(session: Session = Depends(get_session)):
 
 @router.get("/progress", response_model=ProgressOut)
 def progress(session: Session = Depends(get_session)):
-    total = session.execute(select(func.count(Job.id))).scalar_one()
+    # Tout se calcule sur les offres ACTIVES uniquement (hors masquées) —
+    # cohérent avec le tagger qui ignore désormais les offres hidden.
+    active = Job.hidden.isnot(True)
+    total = session.execute(select(func.count(Job.id)).where(active)).scalar_one()
     scored = session.execute(
-        select(func.count(Job.id)).where(Job.score_ai.isnot(None))
+        select(func.count(Job.id)).where(active, Job.score_ai.isnot(None))
     ).scalar_one()
     extracted = session.execute(
-        select(func.count(Job.id)).where(Job.details_ai.isnot(None))
+        select(func.count(Job.id)).where(active, Job.details_ai.isnot(None))
     ).scalar_one()
 
     pending_scoring = total - scored
@@ -86,8 +89,7 @@ def progress(session: Session = Depends(get_session)):
     daily_quota = max(settings.gemini_daily_quota, 1)
     estimated_days = math.ceil(remaining_calls / daily_quota) if remaining_calls else 0
 
-    # Backfill descriptions LinkedIn (hors offres masquées)
-    active = Job.hidden.isnot(True)
+    # Backfill descriptions LinkedIn (même filtre active)
     linkedin_total = session.execute(
         select(func.count(Job.id)).where(active, Job.source == "linkedin")
     ).scalar_one()
