@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     # 3=Confirmé, 4=Senior, 5=Directeur, 6=Exécutif. "1,2" = stage + entrée de carrière.
     # → LinkedIn ne renvoie que ces niveaux : pool déjà filtré avant import/scoring.
     linkedin_experience_level: str | None = "1,2"
+    # Filtre serveur LinkedIn f_TPR (date de publication) : r86400=24h, r604800=7j,
+    # r2592000=30j. Limite le pool aux offres récentes → moins de reposts périmés et
+    # de quota Gemini gaspillé. None = pas de filtre date.
+    linkedin_date_posted: str | None = "r2592000"
     # Filtre titre appliqué à TOUTES les sources au stockage (backend/pipeline.py).
     # Titres rejetés (postes senior). Correspondance par mot entier, casse ignorée.
     # NB: "responsable" / "manager" volontairement absents (trop ambigus : un stage peut

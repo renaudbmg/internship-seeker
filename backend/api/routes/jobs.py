@@ -29,6 +29,7 @@ def list_jobs(
     score_min: int | None = None,
     search: str | None = None,
     hidden: bool = False,  # False = annonces actives ; True = corbeille (archives)
+    unseen: bool = False,  # True = uniquement les offres jamais ouvertes (nouveautés)
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ):
@@ -38,6 +39,8 @@ def list_jobs(
         stmt = stmt.where(Job.hidden.is_(True))
     else:
         stmt = stmt.where(Job.hidden.isnot(True))
+    if unseen:
+        stmt = stmt.where(Job.seen.isnot(True))
     if source:
         stmt = stmt.where(Job.source == source)
     if status:
@@ -61,6 +64,48 @@ def list_jobs(
     stmt = stmt.order_by(effective_score.is_(None), effective_score.desc(), Job.scraped_at.desc())
     items = session.execute(stmt.limit(limit).offset(offset)).scalars().all()
     return JobListOut(total=total, items=items)
+
+
+@router.get("/export.csv")
+def export_csv(session: Session = Depends(get_session)):
+    """Exporte les candidatures (offres postulées) en CSV pour suivi externe."""
+    import csv
+    import io
+
+    from fastapi.responses import Response
+
+    jobs = (
+        session.execute(
+            select(Job)
+            .where(or_(Job.status == "applied", Job.applied_at.isnot(None)))
+            .order_by(Job.applied_at.desc())
+        )
+        .scalars()
+        .all()
+    )
+
+    def _fmt(dt):
+        return dt.strftime("%Y-%m-%d") if dt else ""
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([
+        "Titre", "Entreprise", "Lieu", "Score", "Date candidature",
+        "Relance", "Réponse", "Statut", "URL", "Notes",
+    ])
+    for j in jobs:
+        score = j.score_ai if j.score_ai is not None else j.score_heuristic
+        writer.writerow([
+            j.title, j.company, j.location or "", score if score is not None else "",
+            _fmt(j.applied_at), _fmt(j.follow_up_at), j.response or "",
+            j.status, j.url, (j.notes or "").replace("\n", " "),
+        ])
+
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=candidatures.csv"},
+    )
 
 
 @router.get("/{job_id}", response_model=JobOut)

@@ -109,6 +109,8 @@ class LinkedInScraper(BaseScraper):
             }
             if self.settings.linkedin_experience_level:
                 params["f_E"] = self.settings.linkedin_experience_level
+            if self.settings.linkedin_date_posted:
+                params["f_TPR"] = self.settings.linkedin_date_posted
 
             resp = self._get_with_retry(client, params, keyword, start)
             if resp is None:

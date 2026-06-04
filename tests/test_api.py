@@ -100,6 +100,30 @@ def test_tracking_refuse_reponse_invalide(client, db_session):
     assert r.status_code == 422
 
 
+# ---------- Nouveautés (non vues) ----------
+
+def test_filtre_unseen(client, db_session):
+    _seed(db_session, id="vue", seen=True)
+    _seed(db_session, id="neuve", seen=False)
+    r = client.get("/jobs?unseen=true").json()
+    assert {j["id"] for j in r["items"]} == {"neuve"}
+
+
+# ---------- Export CSV ----------
+
+def test_export_csv_candidatures(client, db_session):
+    _seed(db_session, id="postule", status="applied")
+    _seed(db_session, id="autre", status="to_review")
+    r = client.get("/jobs/export.csv")
+    assert r.status_code == 200
+    assert "text/csv" in r.headers["content-type"]
+    lignes = r.text.strip().splitlines()
+    assert lignes[0].startswith("Titre,Entreprise")
+    # seule l'offre postulée figure (1 entête + 1 ligne)
+    assert len(lignes) == 2
+    assert "Salomon" in lignes[1]
+
+
 # ---------- Masquage ----------
 
 def test_masquer_puis_restaurer(client, db_session):

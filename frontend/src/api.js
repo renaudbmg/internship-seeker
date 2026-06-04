@@ -42,6 +42,24 @@ export async function probeAuth() {
   }
 }
 
+// Télécharge l'export CSV des candidatures (fetch authentifié → blob → download).
+export async function downloadCandidaturesCsv() {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/jobs/export.csv`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`Export échoué (${res.status})`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "candidatures.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 function buildQuery(filters) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([k, v]) => {
