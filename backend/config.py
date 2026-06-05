@@ -77,10 +77,6 @@ class Settings(BaseSettings):
         "agent de sécurité,vigile"
     )
 
-    # Source: The Muse (gratuite, sans clé) — socle de secours, désactivé par défaut
-    themuse_enabled: bool = False
-    themuse_api_key: str | None = None
-
     # Source: ATS SmartRecruiters — désactivé (focus LinkedIn d'abord)
     smartrecruiters_enabled: bool = False
     smartrecruiters_companies: str = "Salomon,Asics"
