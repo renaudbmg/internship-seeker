@@ -56,12 +56,25 @@ def stats(session: Session = Depends(get_session)):
         ).scalar_one()
         by_score[label] = count
 
+    # Tags Gemini par jour : offres avec score_ai, groupées par date de scrape.
+    # (proxy fidèle : les offres sont taguées peu après leur import le même jour.)
+    tagged_day = func.strftime("%Y-%m-%d", Job.scraped_at)
+    by_tagged = dict(
+        session.execute(
+            select(tagged_day, func.count(Job.id))
+            .where(active, Job.score_ai.isnot(None))
+            .group_by(tagged_day)
+            .order_by(tagged_day)
+        ).all()
+    )
+
     return StatsOut(
         total=total,
         by_source=by_source,
         by_status=by_status,
         by_day=by_day,
         by_score=by_score,
+        by_tagged=by_tagged,
     )
 
 
