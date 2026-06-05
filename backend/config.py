@@ -109,9 +109,10 @@ class Settings(BaseSettings):
     # Extraction de champs normés — activée via le tagger combiné (même flag).
     # Conservé pour le chemin de backward-compat (offres déjà scorées sans extraction).
     extraction_enabled: bool = True
-    # RPD réel = 20. Avec le tagger combiné (1 appel/offre), on tague 20 offres/jour max.
-    # ~265 offres en attente → ~13 jours pour tout tagger au rythme actuel.
-    gemini_daily_quota: int = 20
+    # RPD réel = 20 par clé. Avec 3 clés en rotation (confirmé run 05/06/2026),
+    # quota effectif = ~60/jour (2 runs × ~30). L'estimation "jours restants" dans
+    # l'État des lieux se base sur cette valeur.
+    gemini_daily_quota: int = 60
     # Seuil heuristique sous lequel on N'APPELLE PAS Gemini : ces offres gardent leur
     # score heuristique (affiché « ~ ») mais ne consomment pas de quota. Concentre les
     # ~20-60 appels/jour sur les offres prometteuses. 0 = tagger tout (désactive le seuil).
