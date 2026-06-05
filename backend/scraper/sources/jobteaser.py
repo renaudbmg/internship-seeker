@@ -1,215 +1,139 @@
 from __future__ import annotations
 
-import json
+import random
+import re
 import time
 
 import httpx
 from bs4 import BeautifulSoup
 
+from ...ai.heuristic import heuristic_score
 from ..base import BaseScraper, RawJob, strip_html
 
-# JobTeaser n'expose pas d'API publique documentée.
-# Leur site est rendu côté serveur : les offres sont soit dans le HTML, soit dans
-# __NEXT_DATA__ (Next.js). On scrape les deux en cascade.
-_BASE_URL = "https://www.jobteaser.com"
-_JOBS_URL = "https://www.jobteaser.com/fr/offres-d-emploi"
+_BASE = "https://www.jobteaser.com"
+# Le listing JobTeaser n'est pas filtrable par mot-clé (?q= → 403) : on récupère
+# tous les contrats étudiants puis on ne garde que les titres data/sport pertinents
+# (score heuristique titre ≥ seuil). Évite de noyer la base de bruit généraliste.
+_MIN_TITLE_SCORE = 40
+_LISTING = f"{_BASE}/fr/job-offers"
+
+# Pool de User-Agents (le 403 JobTeaser est capricieux : on varie + on réessaie).
+_USER_AGENTS = [
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
+]
+
+# UUID en tête de slug : /fr/job-offers/<uuid>-<entreprise>-<titre>
+_UUID_RE = re.compile(r"/fr/job-offers/([0-9a-f-]{36})")
+# Contrats qu'on garde (stage / alternance / 1er emploi) — JobTeaser est étudiant.
+_KEEP_CONTRACT = ("stage", "alternance", "apprentissage", "vie", "graduate", "premier emploi")
 
 
 class JobTeaserScraper(BaseScraper):
-    """JobTeaser — scraping HTML du listing public (stages en France).
+    """JobTeaser — plateforme stage/alternance étudiante (FR).
 
-    JobTeaser cible les étudiants et jeunes diplômés ; beaucoup d'offres PFE/stage
-    de marques sport et événementiel non présentes sur LinkedIn.
+    La recherche par mot-clé (?q=) renvoie 403, mais le listing général est servi
+    en HTML server-rendered. On pagine le listing, on parse les cartes (entreprise,
+    titre, contrat, lien), on filtre les contrats stage/alternance, et le pipeline
+    applique ensuite le filtrage titre + scoring. Descriptions récupérées sur la
+    page détail (limité, avec jitter, tolérant au 403).
     """
 
     name = "jobteaser"
 
-    @property
-    def _headers(self) -> dict[str, str]:
+    def _hdrs(self) -> dict[str, str]:
         return {
-            **self.headers,
-            "Accept": "text/html,application/xhtml+xml",
-            "Accept-Language": "fr-FR,fr;q=0.9",
+            "User-Agent": random.choice(_USER_AGENTS),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+            "Referer": _LISTING,
         }
 
     def fetch(self) -> list[RawJob]:
-        seen: dict[str, RawJob] = {}
-        with httpx.Client(
-            timeout=self.timeout, headers=self._headers, follow_redirects=True
-        ) as client:
-            for keyword in self.settings.keyword_list:
-                for job in self._fetch_keyword(client, keyword):
-                    seen.setdefault(job.source_id or job.url, job)
-                time.sleep(0.5)
-        return list(seen.values())
+        jobs: dict[str, RawJob] = {}
+        with httpx.Client(timeout=self.timeout, follow_redirects=True) as client:
+            for page in range(1, self.settings.jobteaser_max_pages + 1):
+                html = self._get_listing(client, page)
+                if not html:
+                    continue
+                cards = self._parse_cards(html)
+                if not cards:
+                    break  # plus de résultats
+                for card in cards:
+                    jobs.setdefault(card.source_id or card.url, card)
+                time.sleep(random.uniform(1.0, 2.0))
 
-    def _fetch_keyword(self, client: httpx.Client, keyword: str) -> list[RawJob]:
-        params = {
-            "q": keyword,
-            "contract_type_codes[]": "internship",
-            "country_codes[]": "fr",
-            "locale": "fr",
-            "per_page": str(self.settings.jobteaser_max_per_keyword),
-        }
-        try:
-            resp = client.get(_JOBS_URL, params=params)
-            resp.raise_for_status()
-        except Exception as exc:
-            print(f"[jobteaser] erreur « {keyword} »: {exc!r}")
-            return []
+            # Descriptions (limité, tolérant) pour de meilleures fiches IA.
+            self._enrich(client, list(jobs.values()))
 
-        jobs = self._parse(resp.text)
-        print(f"[jobteaser] {len(jobs)} offres pour « {keyword} »")
-        return jobs
+        return list(jobs.values())
 
-    def _parse(self, html: str) -> list[RawJob]:
-        soup = BeautifulSoup(html, "html.parser")
-
-        # Tentative 1 : données JSON dans __NEXT_DATA__ (Next.js)
-        script = soup.find("script", {"id": "__NEXT_DATA__"})
-        if script and script.string:
+    def _get_listing(self, client: httpx.Client, page: int, retries: int = 2) -> str | None:
+        # page 1 = URL de base (le param ?page=1 renvoie 403) ; page ≥2 = ?page=N.
+        url = _LISTING if page == 1 else f"{_LISTING}?page={page}"
+        for attempt in range(retries + 1):
             try:
-                data = json.loads(script.string)
-                offers = self._dig_offers(data)
-                if offers:
-                    return [self._parse_json_offer(o) for o in offers if o]
-            except (json.JSONDecodeError, ValueError):
-                pass
-
-        # Tentative 2 : balises JSON-LD (schema.org JobPosting)
-        json_ld_jobs = self._parse_json_ld(soup)
-        if json_ld_jobs:
-            return json_ld_jobs
-
-        # Tentative 3 : HTML fallback — cartes d'offres classiques
-        return self._parse_html_cards(soup)
-
-    @staticmethod
-    def _dig_offers(obj, depth: int = 0) -> list | None:
-        """Cherche la liste d'offres dans le JSON Next.js."""
-        if depth > 6:
-            return None
-        if isinstance(obj, dict):
-            for key in ("jobOffers", "job_offers", "offers", "jobs", "results", "items"):
-                if key in obj and isinstance(obj[key], list) and obj[key]:
-                    return obj[key]
-            for v in obj.values():
-                result = JobTeaserScraper._dig_offers(v, depth + 1)
-                if result:
-                    return result
-        elif isinstance(obj, list) and obj:
-            # Si c'est une liste d'objets avec un champ "title", c'est probablement les offres
-            first = obj[0]
-            if isinstance(first, dict) and ("title" in first or "name" in first):
-                return obj
+                r = client.get(url, headers=self._hdrs())
+                if r.status_code == 403:
+                    if attempt < retries:
+                        time.sleep(random.uniform(3, 6))
+                        continue
+                    print(f"[jobteaser] 403 persistant page {page}")
+                    return None
+                r.raise_for_status()
+                return r.text
+            except httpx.HTTPError as exc:
+                print(f"[jobteaser] échec page {page}: {exc!r}")
+                return None
         return None
 
-    @staticmethod
-    def _parse_json_offer(item: dict) -> RawJob | None:
-        title = item.get("title") or item.get("name") or ""
-        if not title:
-            return None
-        company_obj = item.get("company") or item.get("organization") or {}
-        company = (
-            company_obj.get("name")
-            if isinstance(company_obj, dict)
-            else str(company_obj)
-        ) or ""
-        location_obj = item.get("location") or item.get("city") or {}
-        location = (
-            location_obj.get("name") or location_obj.get("label")
-            if isinstance(location_obj, dict)
-            else str(location_obj)
-        ) or "France"
-        slug = item.get("slug") or item.get("id") or ""
-        url = item.get("url") or item.get("apply_url") or ""
-        if not url and slug:
-            url = f"{_BASE_URL}/fr/offres-d-emploi/{slug}"
-        description = strip_html(item.get("description") or item.get("profile") or "")
-        source_id = str(item.get("id") or item.get("reference") or slug)
-        return RawJob(
-            title=title,
-            company=company,
-            source="jobteaser",
-            url=url,
-            location=location,
-            description=description[:4000],
-            source_id=source_id,
-        )
-
-    @staticmethod
-    def _parse_json_ld(soup: BeautifulSoup) -> list[RawJob]:
-        jobs = []
-        for script in soup.find_all("script", type="application/ld+json"):
-            try:
-                data = json.loads(script.string or "")
-                if isinstance(data, list):
-                    items = data
-                else:
-                    items = [data]
-                for item in items:
-                    if item.get("@type") != "JobPosting":
-                        continue
-                    company_obj = item.get("hiringOrganization") or {}
-                    location_obj = item.get("jobLocation") or {}
-                    address = (
-                        location_obj.get("address") if isinstance(location_obj, dict) else {}
-                    ) or {}
-                    city = address.get("addressLocality") or address.get("addressRegion") or "France"
-                    source_id = item.get("identifier", {}).get("value") or item.get("url", "").split("/")[-1]
-                    jobs.append(RawJob(
-                        title=item.get("title", ""),
-                        company=company_obj.get("name", "") if isinstance(company_obj, dict) else "",
-                        source="jobteaser",
-                        url=item.get("url", ""),
-                        location=city,
-                        description=strip_html(item.get("description", ""))[:4000],
-                        source_id=source_id,
-                    ))
-            except Exception:
+    def _parse_cards(self, html: str) -> list[RawJob]:
+        soup = BeautifulSoup(html, "html.parser")
+        out: list[RawJob] = []
+        for card in soup.select('[class*="JobAdCard-module"]'):
+            link = card.select_one('a[class*="link"][href*="/fr/job-offers/"]')
+            if not link:
                 continue
-        return jobs
+            title = link.get_text(strip=True)
+            href = link.get("href", "")
+            company_el = card.select_one('[class*="companyName"]')
+            company = company_el.get_text(strip=True) if company_el else ""
+            contract_el = card.select_one('[data-testid="jobad-card-contract"]')
+            contract = contract_el.get_text(" ", strip=True).lower() if contract_el else ""
 
-    @staticmethod
-    def _parse_html_cards(soup: BeautifulSoup) -> list[RawJob]:
-        jobs = []
-        selectors = [
-            "article[data-testid]",
-            "li[data-testid]",
-            ".job-card",
-            ".offer-card",
-            "article.card",
-        ]
-        cards = []
-        for sel in selectors:
-            cards = soup.select(sel)
-            if cards:
-                break
+            # On ne garde que stage/alternance/1er emploi (sinon trop de CDI seniors).
+            if contract and not any(k in contract for k in _KEEP_CONTRACT):
+                continue
+            if not title or not href:
+                continue
+            # Pertinence : titre data/sport uniquement (le listing est généraliste).
+            if heuristic_score(title) < _MIN_TITLE_SCORE:
+                continue
 
-        for card in cards:
-            try:
-                title_el = card.select_one("h2, h3, [data-testid*='title'], .title")
-                if not title_el:
-                    continue
-                company_el = card.select_one(
-                    ".company, .organization, [data-testid*='company'], [data-testid*='organization']"
-                )
-                location_el = card.select_one(
-                    ".location, .city, [data-testid*='location'], [data-testid*='city']"
-                )
-                link_el = card.select_one("a[href]")
-                href = link_el["href"] if link_el else ""
-                if href and not href.startswith("http"):
-                    href = _BASE_URL + href
-                source_id = href.split("/")[-1].split("?")[0] if href else ""
-                jobs.append(RawJob(
-                    title=title_el.get_text(strip=True),
-                    company=company_el.get_text(strip=True) if company_el else "",
+            m = _UUID_RE.search(href)
+            out.append(
+                RawJob(
+                    title=title,
+                    company=company,
                     source="jobteaser",
-                    url=href,
-                    location=location_el.get_text(strip=True) if location_el else "France",
-                    source_id=source_id,
-                ))
+                    url=_BASE + href if href.startswith("/") else href,
+                    location="France",
+                    source_id=m.group(1) if m else None,
+                )
+            )
+        return out
+
+    def _enrich(self, client: httpx.Client, cards: list[RawJob]) -> None:
+        for card in cards[: self.settings.jobteaser_max_descriptions]:
+            try:
+                r = client.get(card.url, headers=self._hdrs())
+                if r.status_code != 200:
+                    continue
+                soup = BeautifulSoup(r.text, "html.parser")
+                body = soup.select_one('[class*="JobAdDescription"], main, article')
+                if body:
+                    card.description = strip_html(body.get_text(" ", strip=True))[:4000]
             except Exception:
                 continue
-        return jobs
+            time.sleep(random.uniform(1.0, 2.0))

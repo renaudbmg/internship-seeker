@@ -123,8 +123,9 @@ class Settings(BaseSettings):
     wttj_max_per_keyword: int = 50
 
     # Source: JobTeaser — désactivé (leur site bloque les scrapers)
-    jobteaser_enabled: bool = False
-    jobteaser_max_per_keyword: int = 50
+    jobteaser_enabled: bool = True
+    jobteaser_max_pages: int = 5            # pages de listing à parcourir (~20 offres/page)
+    jobteaser_max_descriptions: int = 30    # nb max de descriptions détaillées récupérées
 
     # Notifications Telegram (Sprint 5) — bot API directe
     # 1) parler à @BotFather -> /newbot -> récupérer le token
