@@ -182,7 +182,15 @@ const FACTS = [
 const filled = (v) => v && v !== "Non précisé";
 
 function JobFiche({ details }) {
-  const facts = FACTS.filter(([key]) => filled(details[key]));
+  // Rémunération : annoncée si présente, sinon estimée par l'IA (préfixe ≈).
+  const remStated = filled(details.remuneration) ? details.remuneration : null;
+  const remEst = filled(details.remuneration_estimee) ? details.remuneration_estimee : null;
+  const remDisplay = remStated || (remEst ? `≈ ${remEst}` : null);
+  const remEstimated = !remStated && !!remEst;
+
+  const facts = FACTS.filter(([key]) =>
+    key === "remuneration" ? !!remDisplay : filled(details[key])
+  );
   const missions = Array.isArray(details.missions) ? details.missions : [];
   const competences = Array.isArray(details.competences) ? details.competences : [];
 
@@ -194,8 +202,15 @@ function JobFiche({ details }) {
         <dl className="grid grid-cols-2 gap-x-3 gap-y-2">
           {facts.map(([key, label]) => (
             <div key={key}>
-              <dt className="text-xs uppercase tracking-wide text-slate-400">{label}</dt>
-              <dd className="font-medium text-slate-700">{details[key]}</dd>
+              <dt className="text-xs uppercase tracking-wide text-slate-400">
+                {label}
+                {key === "remuneration" && remEstimated && (
+                  <span className="ml-1 normal-case text-amber-600">(estimé)</span>
+                )}
+              </dt>
+              <dd className="font-medium text-slate-700">
+                {key === "remuneration" ? remDisplay : details[key]}
+              </dd>
             </div>
           ))}
         </dl>
