@@ -43,3 +43,14 @@ class Job(Base):
     follow_up_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # date de relance
     # réponse reçue : None/pending = en attente, positive, negative, ghosted (sans réponse)
     response: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
+class PushSubscription(Base):
+    """Abonnement Web Push (PWA). Une ligne par appareil/navigateur abonné."""
+
+    __tablename__ = "push_subscriptions"
+
+    endpoint: Mapped[str] = mapped_column(Text, primary_key=True)
+    p256dh: Mapped[str] = mapped_column(Text)
+    auth: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)

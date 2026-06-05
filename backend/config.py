@@ -135,6 +135,12 @@ class Settings(BaseSettings):
     telegram_chat_id: str | None = None
     dashboard_url: str | None = None  # lien inclus dans le message (front déployé)
 
+    # Notifications push Web (PWA) — ouvre directement l'app au clic (vs navigateur Telegram).
+    # Générer les clés : voir README. Privée en secret, publique exposée au front.
+    vapid_public_key: str | None = None
+    vapid_private_key: str | None = None  # PEM (sauts de ligne échappés \n acceptés)
+    vapid_subject: str = "mailto:renaud.baumgarten@papernest.com"
+
     # Stockage
     db_path: str = "backend/db/jobs.db"  # SQLite local (dev / Mac)
     # Turso (libSQL) — base distante persistante pour le déploiement.

@@ -228,6 +228,21 @@ def _notify(new_ids: list[str]) -> None:
     except Exception as exc:  # une notif en échec ne doit pas casser le run
         print(f"[telegram] ERREUR: {exc!r}")
 
+    # Push PWA (best-effort, en plus de Telegram)
+    try:
+        from .notifications.push import send_push
+
+        n = len(jobs)
+        if n:
+            sent = send_push(
+                f"{n} nouvelle{'s' if n > 1 else ''} offre{'s' if n > 1 else ''}",
+                ", ".join(j.title for j in jobs[:3])[:120],
+            )
+            if sent:
+                print(f"[push] {sent} appareil(s) notifié(s)")
+    except Exception as exc:
+        print(f"[push] ERREUR: {exc!r}")
+
 
 def _notify_follow_ups() -> None:
     """Rappelle les relances dues : candidatures postulées dont la date de relance est
@@ -257,6 +272,16 @@ def _notify_follow_ups() -> None:
         print(f"[telegram] relances ignorées : {exc}")
     except Exception as exc:  # une notif en échec ne doit pas casser le run
         print(f"[telegram] ERREUR relances: {exc!r}")
+
+    try:
+        from .notifications.push import send_push
+
+        send_push(
+            f"⏰ {len(due)} relance{'s' if len(due) > 1 else ''} à faire",
+            ", ".join(j.company for j in due[:3])[:120],
+        )
+    except Exception as exc:
+        print(f"[push] ERREUR relances: {exc!r}")
 
 
 def _run() -> list[Job]:

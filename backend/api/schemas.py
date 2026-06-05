@@ -72,6 +72,11 @@ class HiddenUpdate(BaseModel):
     hidden: bool
 
 
+class PushSubscriptionIn(BaseModel):
+    endpoint: str
+    keys: dict[str, str]  # {"p256dh": ..., "auth": ...}
+
+
 class StatsOut(BaseModel):
     total: int
     by_source: dict[str, int]

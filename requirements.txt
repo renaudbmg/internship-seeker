@@ -16,5 +16,8 @@ uvicorn[standard]==0.32.1
 # libsql-client WebSocket que Turso ne supporte plus (handshake 400).
 sqlalchemy-libsql==0.2.0
 
+# Notifications push Web (PWA) — envoi côté pipeline
+pywebpush==2.0.0
+
 # Pistes futures — décommenter au besoin
 # playwright==1.48.0

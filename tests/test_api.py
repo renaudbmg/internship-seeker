@@ -170,6 +170,29 @@ def test_export_csv_candidatures(client, db_session):
     assert "Salomon" in lignes[1]
 
 
+# ---------- Push PWA ----------
+
+def test_push_subscribe_et_vapid(client, db_session):
+    assert client.get("/push/vapid-public-key").status_code == 200
+    sub = {"endpoint": "https://fcm.test/x", "keys": {"p256dh": "a", "auth": "b"}}
+    assert client.post("/push/subscribe", json=sub).json() == {"ok": True}
+    # ré-abonnement même endpoint = upsert (pas de doublon)
+    client.post("/push/subscribe", json=sub)
+    from backend.db.models import PushSubscription
+    assert db_session.query(PushSubscription).count() == 1
+
+
+def test_push_subscribe_invalide(client, db_session):
+    assert client.post("/push/subscribe", json={"endpoint": "", "keys": {}}).status_code == 422
+
+
+def test_send_push_noop_si_non_configure(db_session, monkeypatch):
+    from backend.config import settings
+    from backend.notifications.push import send_push
+    monkeypatch.setattr(settings, "vapid_private_key", None)
+    assert send_push("t", "b") == 0  # pas de crash, 0 envoi
+
+
 # ---------- Masquage ----------
 
 def test_masquer_puis_restaurer(client, db_session):

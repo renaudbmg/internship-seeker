@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from ..db.database import init_db
 from .auth import require_auth
-from .routes import jobs, stats
+from .routes import jobs, push, stats
 
 
 @asynccontextmanager
@@ -40,3 +40,5 @@ def auth_check(_: None = Depends(require_auth)) -> dict:
 # require_auth protège toutes les routes /jobs (lecture ET écriture).
 app.include_router(stats.router, dependencies=[Depends(require_auth)])
 app.include_router(jobs.router, dependencies=[Depends(require_auth)])
+# push : /push/vapid-public-key public, /push/subscribe protégé (auth dans le routeur)
+app.include_router(push.router)

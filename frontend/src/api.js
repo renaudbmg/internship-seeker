@@ -60,6 +60,38 @@ export async function downloadCandidaturesCsv() {
   URL.revokeObjectURL(url);
 }
 
+// ── Notifications push PWA ───────────────────────────────────────────────────
+function urlBase64ToUint8Array(base64) {
+  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+  const b64 = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(b64);
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+}
+
+export function pushSupported() {
+  return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+}
+
+// Active les notifications : SW + permission + abonnement + envoi au backend.
+// Renvoie un message d'état (affiché à l'utilisateur).
+export async function enablePush() {
+  if (!pushSupported()) throw new Error("Push non supporté sur cet appareil/navigateur");
+  const { key } = await request("/push/vapid-public-key");
+  if (!key) throw new Error("Push non configuré côté serveur (clés VAPID manquantes)");
+
+  const reg = await navigator.serviceWorker.register("/sw.js");
+  const perm = await Notification.requestPermission();
+  if (perm !== "granted") throw new Error("Permission refusée");
+
+  await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(key),
+  });
+  await request("/push/subscribe", { method: "POST", body: JSON.stringify(sub.toJSON()) });
+  return "Notifications activées ✅";
+}
+
 function buildQuery(filters) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([k, v]) => {

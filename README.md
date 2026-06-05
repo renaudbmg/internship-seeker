@@ -79,9 +79,23 @@ Le CI (`.github/workflows/ci.yml`) exécute lint + tests + build front à chaque
 | `GEMINI_API_KEY` | Clé Gemini principale ([aistudio](https://aistudio.google.com/app/apikey)) |
 | `GEMINI_API_KEYS` | Clés supplémentaires (autres comptes), séparées par des virgules |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Notifications Telegram |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Notifications push PWA (Web Push) |
 | `DASHBOARD_URL` | Lien inclus dans les messages Telegram |
 | `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` | Base distante en prod (sinon SQLite local) |
 | `KEYWORDS` / `LOCATION` | Mots-clés et zone de recherche |
+
+## Notifications push (PWA)
+
+Permet d'être notifié des nouvelles offres / relances **directement dans l'app**
+installée (un clic ouvre la PWA, pas le navigateur Telegram). Générer les clés VAPID :
+
+```bash
+python -c "from py_vapid import Vapid01; from cryptography.hazmat.primitives import serialization as s; import base64; v=Vapid01(); v.generate_keys(); print('PUBLIC=', base64.urlsafe_b64encode(v.private_key.public_key().public_bytes(s.Encoding.X962, s.PublicFormat.UncompressedPoint)).decode().rstrip('=')); print(v.private_key.private_bytes(s.Encoding.PEM, s.PrivateFormat.PKCS8, s.NoEncryption()).decode())"
+```
+
+- `VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` côté **Vercel** (subscribe + clé publique)
+- `VAPID_PRIVATE_KEY` (+ public) côté **GitHub Actions** (envoi depuis le cron)
+- Sur iPhone : ajouter le site à l'écran d'accueil, puis bouton 🔔 dans l'app.
 
 ## Déploiement
 

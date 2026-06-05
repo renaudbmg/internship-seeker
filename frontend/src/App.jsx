@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { clearToken, useJobs, useTriggerScrape } from "./api.js";
+import { clearToken, enablePush, pushSupported, useJobs, useTriggerScrape } from "./api.js";
 import StatsBar from "./components/StatsBar.jsx";
 import Filters from "./components/Filters.jsx";
 import JobCard from "./components/JobCard.jsx";
@@ -17,8 +17,19 @@ export default function App() {
   const [view, setView] = useState("jobs");
   const [filters, setFilters] = useState({ search: "", status: "", score_min: "", hidden: "", unseen: "" });
   const [selectedId, setSelectedId] = useState(null);
+  const [pushMsg, setPushMsg] = useState("");
   const { data, isLoading, isError } = useJobs(filters);
   const triggerScrape = useTriggerScrape();
+
+  const activatePush = async () => {
+    setPushMsg("Activation…");
+    try {
+      setPushMsg(await enablePush());
+    } catch (e) {
+      setPushMsg(e.message);
+    }
+    setTimeout(() => setPushMsg(""), 4000);
+  };
 
   const items = data?.items || [];
   const selected = items.find((j) => j.id === selectedId) || null;
@@ -40,6 +51,15 @@ export default function App() {
             >
               {triggerScrape.isPending ? "Lancement…" : "Scraper maintenant"}
             </button>
+            {pushSupported() && (
+              <button
+                onClick={activatePush}
+                title="Activer les notifications push"
+                className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200"
+              >
+                🔔
+              </button>
+            )}
             <button
               onClick={() => { clearToken(); window.location.reload(); }}
               title="Se déconnecter"
@@ -49,6 +69,7 @@ export default function App() {
             </button>
           </div>
         </div>
+        {pushMsg && <p className="mt-2 text-sm text-slate-600">{pushMsg}</p>}
         {triggerScrape.isSuccess && (
           <p className="mt-2 text-sm text-green-600">
             Scrape lancé en arrière-plan — rafraîchis dans quelques instants.
