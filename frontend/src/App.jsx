@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useJobs, useTriggerScrape } from "./api.js";
+import { clearToken, useJobs, useTriggerScrape } from "./api.js";
 import StatsBar from "./components/StatsBar.jsx";
 import Filters from "./components/Filters.jsx";
 import JobCard from "./components/JobCard.jsx";
@@ -33,12 +33,21 @@ export default function App() {
               PFE / stage sport & data — mars 2026
             </p>
           </div>
-          <button
-            onClick={() => triggerScrape.mutate()}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-          >
-            {triggerScrape.isPending ? "Lancement…" : "Scraper maintenant"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => triggerScrape.mutate()}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            >
+              {triggerScrape.isPending ? "Lancement…" : "Scraper maintenant"}
+            </button>
+            <button
+              onClick={() => { clearToken(); window.location.reload(); }}
+              title="Se déconnecter"
+              className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200"
+            >
+              ⏏
+            </button>
+          </div>
         </div>
         {triggerScrape.isSuccess && (
           <p className="mt-2 text-sm text-green-600">

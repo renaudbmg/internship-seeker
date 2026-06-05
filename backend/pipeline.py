@@ -144,6 +144,33 @@ def _backfill_descriptions() -> None:
     print(f"[backfill] {filled} descriptions LinkedIn récupérées")
 
 
+def _auto_archive() -> None:
+    """Masque les offres anciennes jamais traitées (statut to_review) pour garder la
+    liste propre. Réversible : elles restent dans la corbeille."""
+    days = settings.auto_archive_days
+    if days <= 0:
+        return
+    from datetime import datetime, timedelta
+
+    cutoff = datetime.now(UTC) - timedelta(days=days)
+    with SessionLocal() as session:
+        stale = (
+            session.query(Job)
+            .filter(
+                Job.hidden.isnot(True),
+                Job.status == "to_review",
+                Job.scraped_at < cutoff,
+            )
+            .all()
+        )
+        if not stale:
+            return
+        for job in stale:
+            job.hidden = True
+        session.commit()
+        print(f"[archive] {len(stale)} offres anciennes (>{days}j, non traitées) archivées")
+
+
 def _backfill_heuristic() -> None:
     """Calcule le score heuristique des offres qui n'en ont pas encore (gratuit, local).
     Couvre les offres importées avant l'introduction du scoring à deux étages."""
@@ -240,6 +267,7 @@ def _run() -> list[Job]:
     print(f"\n{len(new)} nouvelles offres stockées (sur {len(raw)} récupérées).")
     for job in new[:10]:
         print(f"  • [{job.source}] {job.title} — {job.company} ({job.location})")
+    _auto_archive()
     _backfill_descriptions()
     _backfill_heuristic()
     _tag_new()

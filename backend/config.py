@@ -113,6 +113,10 @@ class Settings(BaseSettings):
     # score heuristique (affiché « ~ ») mais ne consomment pas de quota. Concentre les
     # ~20-60 appels/jour sur les offres prometteuses. 0 = tagger tout (désactive le seuil).
     gemini_min_heuristic: int = 25
+    # Auto-archivage : masque les offres scrapées il y a plus de N jours et JAMAIS
+    # traitées (statut to_review) → garde la liste propre. 0 = désactivé.
+    # Elles restent consultables dans la corbeille.
+    auto_archive_days: int = 45
 
     # Source: Welcome to the Jungle — désactivé (sera branché après LinkedIn)
     wttj_enabled: bool = False
