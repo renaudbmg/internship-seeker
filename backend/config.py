@@ -116,7 +116,7 @@ class Settings(BaseSettings):
     # Auto-archivage : masque les offres scrapées il y a plus de N jours et JAMAIS
     # traitées (statut to_review) → garde la liste propre. 0 = désactivé.
     # Elles restent consultables dans la corbeille.
-    auto_archive_days: int = 45
+    auto_archive_days: int = 0  # désactivé par défaut (0 = ne rien archiver)
 
     # Source: Welcome to the Jungle — désactivé (sera branché après LinkedIn)
     wttj_enabled: bool = False
